@@ -1,0 +1,126 @@
+spring.config.import=optional:file:.env.example[.properties]
+
+spring.profiles.active=local
+management.health.mail.enabled=false
+
+
+logging.level.org.hibernate.SQL=DEBUG
+logging.level.org.hibernate.type.descriptor.sql.BasicBinder=TRACE
+logging.level.org.springframework.transaction=TRACE
+logging.level.org.hibernate.transaction=TRACE
+
+# Server Configuration
+server.port=8085
+server.tomcat.threads.max=400
+# Master Database Configuration (Write)
+spring.datasource.master.url=${SPRING_DATASOURCE_MASTER_URL:jdbc:mysql://localhost:3306/lovenzeaNative_db?createDatabaseIfNotExist=true}
+spring.datasource.master.username=${DB_USERNAME:root}
+spring.datasource.master.password=${DB_PASSWORD}
+spring.datasource.master.driver-class-name=com.mysql.cj.jdbc.Driver
+
+# Replica Database Configuration (Read)
+spring.datasource.replica.url=${SPRING_DATASOURCE_REPLICA_URL:jdbc:mysql://localhost:3306/lovenzeaNative_db?createDatabaseIfNotExist=true}
+spring.datasource.replica.username=${DB_USERNAME:root}
+spring.datasource.replica.password=${DB_PASSWORD}
+spring.datasource.replica.driver-class-name=com.mysql.cj.jdbc.Driver
+
+# Hikari Connection Pool Settings
+spring.datasource.hikari.maximum-pool-size=50
+spring.datasource.hikari.minimum-idle=10
+spring.datasource.hikari.idle-timeout=300000
+spring.datasource.hikari.max-lifetime=1200000
+spring.datasource.hikari.connection-timeout=30000
+spring.datasource.hikari.leak-detection-threshold=10000
+
+# JPA/Hibernate Configuration
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=false
+spring.jpa.properties.hibernate.format_sql=false
+spring.jpa.open-in-view=false
+
+# Logging
+logging.level.org.springframework.web=${LOG_LEVEL_WEB:INFO}
+logging.level.com.punarmilan=${LOG_LEVEL_APP:INFO}
+logging.file.name=logs/punarmilan-backend.log
+
+# MinIO Configuration
+minio.url=${MINIO_URL:http://localhost:9000}
+minio.access-key=${MINIO_ACCESS_KEY}
+minio.secret-key=${MINIO_SECRET_KEY}
+minio.bucket-name=${MINIO_BUCKET_NAME:punarmilan-photos}
+minio.expiry=7
+
+# JWT Configuration
+jwt.secret=${JWT_SECRET}
+jwt.expiration=86400000
+chat.encryption.key=${CHAT_ENCRYPTION_KEY}
+
+
+# File Upload Configuration
+spring.servlet.multipart.max-file-size=15MB
+spring.servlet.multipart.max-request-size=15MB
+
+# Email Configuration
+punarmilan.mail.from-name=${MAIL_FROM_NAME:PunarMilan}
+
+# Email Configuration
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=punarmilan2@gmail.com
+spring.mail.password=shggavvwackzsyba
+app.frontend-url=${FRONTEND_URL:http://localhost:5173}
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+spring.mail.properties.mail.smtp.starttls.required=true
+spring.mail.properties.mail.debug=true
+
+# Razorpay Configuration
+razorpay.key.id=${RAZORPAY_KEY_ID}
+razorpay.key.secret=${RAZORPAY_KEY_SECRET}
+
+# Redis Configuration
+spring.data.redis.host=${SPRING_DATA_REDIS_HOST:localhost}
+spring.data.redis.port=${SPRING_DATA_REDIS_PORT:6379}
+
+# RabbitMQ Configuration
+spring.rabbitmq.host=${SPRING_RABBITMQ_HOST:localhost}
+spring.rabbitmq.port=${SPRING_RABBITMQ_PORT:5672}
+spring.rabbitmq.username=${RABBITMQ_USERNAME:guest}
+spring.rabbitmq.password=${RABBITMQ_PASSWORD:guest}
+
+# Actuator Monitoring
+management.endpoints.web.exposure.include=health,info,metrics,prometheus
+management.endpoint.health.show-details=always
+management.health.redis.enabled=true
+management.health.rabbit.enabled=true
+
+# ========== Match Scoring Weights (must sum to 100) ==========
+match.weight.age=20
+match.weight.maritalStatus=5
+match.weight.diet=5
+match.weight.smokingDrinking=5
+
+# SMS Configuration
+sms.api.url=${SMS_API_URL:http://trans.dreamztechnolgy.org/smsstatuswithid.aspx}
+sms.api.key=${SMS_API_KEY:76bda706af0d42b5a7ea8a615567ad4f}
+sms.username=${SMS_USERNAME:9923400506}
+sms.password=${SMS_PASSWORD:WorknAi@2}
+sms.sender.id=${SMS_SENDER_ID:WRKTIP}
+sms.template.id=${SMS_TEMPLATE_ID:1707178341887596452}
+match.weight.religion=20
+match.weight.location=15
+match.weight.education=15
+match.weight.occupation=10
+match.weight.income=10
+match.weight.height=5
+match.weight.lifestyle=5
+
+# ========== Boost / Penalty Configuration ==========
+match.boost.active-now=10
+match.boost.active-today=5
+match.boost.popularity-max=10
+match.penalty.rejected=20
+
+# ========== Rotation & Pool ==========
+match.rotation.exclude-days=3
+match.candidate.pool-size=200

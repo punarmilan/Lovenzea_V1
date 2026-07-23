@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Event Reminder</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }
+        .container { width: 100%; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden; }
+        .header { background-color: #f43f5e; color: white; padding: 20px; text-align: center; }
+        .content { padding: 30px; }
+        .event-details { background-color: #fff7ed; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #f97316; }
+        .footer { background-color: #f3f4f6; color: #6b7280; padding: 20px; text-align: center; font-size: 12px; }
+        .btn { display: inline-block; padding: 12px 24px; background-color: #f43f5e; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Event Reminder</h1>
+        </div>
+        <div class="content">
+            <p>Hi <span th:text="${userName}">User</span>,</p>
+            <p>This is a friendly reminder that your upcoming event is starting within 24 hours!</p>
+            
+            <div class="event-details">
+                <h2 style="margin-top: 0; color: #1f2937;" th:text="${eventTitle}">Event Title</h2>
+                <p>📅 <strong>Starting:</strong> <span th:text="${#temporals.format(eventDate, 'dd MMM yyyy, hh:mm a')}">Date</span></p>
+                <p>📍 <strong>Location:</strong> <span th:text="${eventLocation}">Location</span></p>
+                <p th:if="${meetingLink != null}">🔗 <strong>Join Link:</strong> <a th:href="${meetingLink}" th:text="${meetingLink}">Link</a></p>
+            </div>
+
+            <p>Don't miss out! We hope to see you there.</p>
+            
+            <a th:if="${meetingLink != null}" th:href="${meetingLink}" class="btn">Join Event Now</a>
+            
+            <p>Best regards,<br>The PunarMilan Team</p>
+        </div>
+        <div class="footer">
+            &copy; 2026 PunarMilan. All rights reserved.
+        </div>
+    </div>
+</body>
+</html>

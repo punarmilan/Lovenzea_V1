@@ -1,0 +1,13 @@
+package com.punarmilan.entity.enums;
+
+public enum NotificationType {
+    PROFILE_VIEW,
+    CONNECTION_REQUEST,
+    CONNECTION_ACCEPTED,
+    CONNECTION_DECLINED,
+    NEW_MATCH,
+    PHOTO_REQUEST,
+    VERIFICATION_APPROVED,
+    VERIFICATION_REJECTED,
+    PROFILE_COMPLETION
+}

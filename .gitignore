@@ -1,0 +1,38 @@
+# Environment variables
+.env
+.env.local
+.env.*
+!.env.example
+
+# Application properties (Spring Boot config)
+**/src/main/resources/application.properties
+**/src/main/resources/application-*.properties
+!**/src/main/resources/application.properties.example
+
+# IDEs and editors
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Java / Maven build output
+**/target/
+*.class
+
+# Node / Expo / React Native
+**/node_modules/
+**/.expo/
+**/dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.expo-shared/
+
+# Database files
+*.db
+*.sqlite
+
+# Application logs
+logs/
+*.log
+punarmilan-backend.log*

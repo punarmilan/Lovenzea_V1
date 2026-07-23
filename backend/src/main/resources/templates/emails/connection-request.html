@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>New Connection Request</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #e91e63, #9c27b0);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .footer {
+            background: #f9f9f9;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #777;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #e91e63;
+            color: white !important;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+
+        .highlight {
+            color: #e91e63;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>PunarMilan</h1>
+        </div>
+        <div class="content">
+            <h2 class="highlight">New Connection Request!</h2>
+            <p>Hello <span th:text="${recipientName}">User</span>,</p>
+            <p><strong th:text="${senderName}">Someone</strong> has sent you a connection request on PunarMilan.</p>
+            <p>Don't keep them waiting! Log in now to view their profile and respond.</p>
+            <p th:if="${message != null}"
+                style="font-style: italic; background-color: #f5f5f5; padding: 10px; border-left: 4px solid #e91e63;">
+                "<span th:text="${message}">Message from sender</span>"
+            </p>
+            <a href="http://localhost:5173/my-shadi/inbox/pending" class="button">View Request</a>
+        </div>
+        <div class="footer">
+            <p>&copy; 2026 PunarMilan Matrimonial Services. All rights reserved.</p>
+            <p>To stop receiving these emails, <a href="http://localhost:5173/settings/alerts">Manage Settings</a></p>
+        </div>
+    </div>
+</body>
+
+</html>

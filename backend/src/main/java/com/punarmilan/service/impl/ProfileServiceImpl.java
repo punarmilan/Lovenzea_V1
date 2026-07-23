@@ -535,12 +535,13 @@ public class ProfileServiceImpl implements ProfileService {
             log.info("Executed native SQL update: updated {} rows in profiles table", updatedRows);
         }
 
-        entityManager.detach(profile);
+        Profile mergedProfile = profile;
+        if (!entityManager.contains(profile)) {
+            mergedProfile = entityManager.merge(profile);
+        }
+        entityManager.refresh(mergedProfile);
 
-        Profile savedProfile = profileRepository.findById(profile.getId())
-                .orElseThrow(() -> new com.punarmilan.exception.ResourceNotFoundException("Profile not found"));
-
-        return mapToDTO(savedProfile, user);
+        return mapToDTO(mergedProfile, user);
     }
 
     @Override

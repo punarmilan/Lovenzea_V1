@@ -620,11 +620,19 @@ export default function Profile() {
                   <Text style={[styles.gridCardTitle, { color: '#A53D52' }]}>Personal Info</Text>
                 </View>
                 <View style={styles.gridCardBody}>
-                  <View style={styles.infoPill}>
+                   <View style={styles.infoPill}>
                     <Text style={styles.infoKey}>Born</Text>
-                    <Text style={[styles.infoVal, isEditing && { color: '#999' }]}>
-                      {profileData?.dateOfBirth || 'N/A'}
-                    </Text>
+                    {isEditing ? (
+                      <TextInput 
+                        style={styles.inlinePillInput} 
+                        defaultValue={formData.dateOfBirth} 
+                        onChangeText={(val) => setFormData({ ...formData, dateOfBirth: val })}
+                        placeholder="YYYY-MM-DD"
+                        placeholderTextColor="#999"
+                      />
+                    ) : (
+                      <Text style={styles.infoVal}>{profileData?.dateOfBirth || 'N/A'}</Text>
+                    )}
                   </View>
                   <View style={styles.infoPill}>
                     <Text style={styles.infoKey}>Time</Text>

@@ -397,7 +397,7 @@ export default function SentInterestsScreen() {
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Image
-                source={require('../../../assets/images/no_interest_data.png')}
+                source={require('../../../assets/images/no_interest_data.jpg')}
                 style={styles.emptyImage}
                 resizeMode="contain"
               />

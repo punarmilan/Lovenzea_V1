@@ -606,7 +606,7 @@ export default function DiscoveryDashboard() {
             <EmptyState 
               title="No Sent Interests"
               message="You haven't sent any interests yet." 
-              image={require('../../../assets/images/no_interest_data.png')} 
+              image={require('../../../assets/images/no_interest_data.jpg')} 
             />
           )}
 

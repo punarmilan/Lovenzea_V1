@@ -51,7 +51,7 @@ export default function MatchFeedCard({ user, onShortlist, onSendInterest, onCha
   }
 
   const isMale = user.gender && user.gender.toLowerCase() === 'male';
-  const defaultPlaceholder = isMale ? require('../../../assets/images/no_photo_male.png') : require('../../../assets/images/no_photo.png');
+  const defaultPlaceholder = isMale ? require('../../../assets/images/no_photo_male.jpg') : require('../../../assets/images/no_photo.png');
 
   const hasPhoto = images.length > 0;
   const mainImage = hasPhoto ? images[0] : defaultPlaceholder;

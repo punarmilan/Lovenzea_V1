@@ -5,10 +5,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // so the mobile app can reach your backend server.
 export const LOCAL_IP = '192.168.1.41'; 
 
-const BASE_URL = `http://${LOCAL_IP}:8085/api`;
-export const SOCKET_URL = `http://${LOCAL_IP}:8085/`;
-export const STOMP_URL = `ws://${LOCAL_IP}:8085/ws`;
-export const SOCKJS_URL = `http://${LOCAL_IP}:8085/ws`;
+const BASE_URL = `https://app.lovenzea.online/api`;
+export const SOCKET_URL = `https://app.lovenzea.online/`;
+export const STOMP_URL = `wss://app.lovenzea.online/ws`;
+export const SOCKJS_URL = `https://app.lovenzea.online/ws`;
 
 // const BASE_URL = `https://punar-milan-backend-v-1-0-h129.vercel.app/api`;
 // export const SOCKET_URL = `https://punar-milan-backend-v-1-0-h129.vercel.app/`;

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": " ",
+    "name": "LovenZea",
     "slug": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -40,6 +40,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "48acf50c-e124-4396-9794-1847402e3f2e"
+      }
     }
   }
 }

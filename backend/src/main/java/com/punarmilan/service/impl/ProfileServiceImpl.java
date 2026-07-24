@@ -381,24 +381,27 @@ public class ProfileServiceImpl implements ProfileService {
         Profile profile = profileRepository.findByUser(user)
                 .orElseThrow(() -> new com.punarmilan.exception.ResourceNotFoundException("Profile not found"));
 
+        User managedUser = userRepository.findById(user.getId())
+                .orElseThrow(() -> new com.punarmilan.exception.ResourceNotFoundException("User not found"));
+
         java.util.Map<String, Object> updatedFields = new java.util.HashMap<>();
 
         updates.forEach((key, value) -> {
             if ("email".equals(key)) {
                 String newEmail = (String) value;
-                if (!newEmail.equals(user.getEmail()) && userRepository.existsByEmail(newEmail)) {
+                if (!newEmail.equals(managedUser.getEmail()) && userRepository.existsByEmail(newEmail)) {
                     throw new DuplicateResourceException("Email already in use: " + newEmail);
                 }
-                user.setEmail(newEmail);
+                managedUser.setEmail(newEmail);
             } else if ("mobileNumber".equals(key)) {
                 String newMobile = (String) value;
                 if (newMobile == null || !newMobile.matches("^[6-9][0-9]{9}$")) {
                     throw new IllegalArgumentException("Mobile number must be 10 digits and start with 6, 7, 8, or 9");
                 }
-                if (!newMobile.equals(user.getMobileNumber()) && userRepository.existsByMobileNumber(newMobile)) {
+                if (!newMobile.equals(managedUser.getMobileNumber()) && userRepository.existsByMobileNumber(newMobile)) {
                     throw new DuplicateResourceException("Mobile number already in use: " + newMobile);
                 }
-                user.setMobileNumber(newMobile);
+                managedUser.setMobileNumber(newMobile);
             } else if ("fullName".equals(key)) {
                 String name = (String) value;
                 log.info("Attempting to update fullName to: {}", name);
@@ -433,7 +436,7 @@ public class ProfileServiceImpl implements ProfileService {
                 profile.setHeight(h);
                 updatedFields.put("height", h);
             } else if ("enabled".equals(key)) {
-                user.setEnabled((Boolean) value);
+                managedUser.setEnabled((Boolean) value);
             } else if ("idProofType".equals(key)) {
                 String type = (String) value;
                 List<String> validTypes = List.of("PAN Card", "Aadhar Card", "Driving License", "Voter ID", "Passport");
@@ -513,9 +516,6 @@ public class ProfileServiceImpl implements ProfileService {
             }
         });
 
-        if (updates.containsKey("email") || updates.containsKey("mobileNumber") || updates.containsKey("enabled")) {
-            userRepository.save(user);
-        }
 
         if (!updatedFields.isEmpty()) {
             updatedFields.put("updated_at", LocalDateTime.now());

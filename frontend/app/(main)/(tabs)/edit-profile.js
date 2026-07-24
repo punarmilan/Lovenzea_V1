@@ -90,15 +90,13 @@ export default function EditProfile() {
       const uriParts = asset.uri.split('.');
       const fileType = uriParts[uriParts.length - 1];
       
-      formDataObj.append('photo', {
+      formDataObj.append('file', {
         uri: asset.uri,
         name: `photo-${Date.now()}.${fileType}`,
         type: `image/${fileType === 'jpg' ? 'jpeg' : fileType}`,
       });
 
-      const response = await api.post('/users/profile/photo', formDataObj, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const response = await api.post('/profiles/photo', formDataObj);
 
       await updateUserData({
         profilePhoto: response.data.profilePhoto,

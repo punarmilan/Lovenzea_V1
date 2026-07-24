@@ -348,9 +348,7 @@ export default function Profile() {
       formData.append('file', { uri: localUri, name: filename, type });
       formData.append('photoIndex', index.toString());
 
-      const res = await api.post('/profiles/photo', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const res = await api.post('/profiles/photo', formData);
 
       setProfileData(res.data);
       if (index === 0 && res.data.profilePhotoUrl) {

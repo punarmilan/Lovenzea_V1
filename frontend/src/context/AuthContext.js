@@ -81,7 +81,6 @@ export const AuthProvider = ({ children }) => {
         
         const photoResponse = await api.post('/profiles/photo', photoFormData, {
           headers: {
-            'Content-Type': 'multipart/form-data',
             'Authorization': `Bearer ${token}`
           }
         });

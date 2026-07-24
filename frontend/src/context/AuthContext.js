@@ -75,14 +75,17 @@ export const AuthProvider = ({ children }) => {
         const photoFormData = new FormData();
         photoFormData.append('file', {
           uri: photoData.uri,
-          type: photoData.type,
-          name: photoData.name || 'profile.jpg',
+          name: photoData.name || `profile-${Date.now()}.jpg`,
+          type: photoData.type || 'image/jpeg',
         });
         
-        const photoResponse = await api.post('/profiles/photo', photoFormData, {
+        const photoResponse = await api.post('/profiles/photo?photoIndex=0', photoFormData, {
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data',
+          },
+          timeout: 120000,
+          transformRequest: data => data,
         });
         
         if (photoResponse.data && photoResponse.data.profilePhotoUrl) {
@@ -90,7 +93,11 @@ export const AuthProvider = ({ children }) => {
           userData.profilePhotoUrl = photoResponse.data.profilePhotoUrl;
         }
       } catch (photoError) {
-        console.error('Photo upload failed:', photoError);
+        console.error('Photo upload failed details:', {
+          status: photoError.response?.status,
+          data: photoError.response?.data,
+          message: photoError.message
+        });
       }
     }
 

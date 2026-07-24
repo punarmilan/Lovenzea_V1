@@ -49,6 +49,7 @@ import {
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import api from '../../../src/services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
 
 export default function Profile() {
@@ -313,14 +314,14 @@ export default function Profile() {
       }
       
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
       });
 
       if (!result.canceled) {
-        uploadProfilePhoto(result.assets[0].uri, index);
+        uploadProfilePhoto(result.assets[0], index);
       }
     } catch (error) {
       console.error('Image picking error:', error);
@@ -336,19 +337,26 @@ export default function Profile() {
     handlePickPhoto(currentPhotoCount);
   };
 
-  const uploadProfilePhoto = async (uri, index) => {
+  const uploadProfilePhoto = async (asset, index) => {
     try {
       setUploadingPhoto(true);
-      const localUri = uri;
-      const filename = localUri.split('/').pop();
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : `image`;
+      const token = await AsyncStorage.getItem('userToken');
 
       const formData = new FormData();
-      formData.append('file', { uri: localUri, name: filename, type });
-      formData.append('photoIndex', index.toString());
+      formData.append('file', {
+        uri: asset.uri,
+        name: asset.fileName || asset.name || `photo-${index}-${Date.now()}.jpg`,
+        type: asset.mimeType || asset.type || 'image/jpeg',
+      });
 
-      const res = await api.post('/profiles/photo', formData);
+      const res = await api.post(`/profiles/photo?photoIndex=${index}`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: 120000,
+        transformRequest: data => data,
+      });
 
       setProfileData(res.data);
       if (index === 0 && res.data.profilePhotoUrl) {
@@ -356,7 +364,11 @@ export default function Profile() {
       }
       Toast.show({ type: 'success', text1: 'Success', text2: 'Photo uploaded successfully' });
     } catch (error) {
-      console.error('Failed to upload photo:', error);
+      console.error('Failed to upload photo details:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
       Toast.show({ type: 'error', text1: 'Upload Failed', text2: 'Could not upload photo' });
     } finally {
       setUploadingPhoto(false);

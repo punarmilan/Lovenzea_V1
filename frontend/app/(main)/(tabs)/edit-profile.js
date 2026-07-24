@@ -14,6 +14,7 @@ import {
 import { useAuth } from '../../../src/context/AuthContext';
 import { Colors, Spacing, Typography, Shadows } from '../../../src/constants/Theme';
 import api from '../../../src/services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, Camera, Save } from 'lucide-react-native';
@@ -86,25 +87,35 @@ export default function EditProfile() {
   const uploadPhoto = async (asset) => {
     try {
       setUploadingPhoto(true);
+      const token = await AsyncStorage.getItem('userToken');
       const formDataObj = new FormData();
-      const uriParts = asset.uri.split('.');
-      const fileType = uriParts[uriParts.length - 1];
-      
       formDataObj.append('file', {
         uri: asset.uri,
-        name: `photo-${Date.now()}.${fileType}`,
-        type: `image/${fileType === 'jpg' ? 'jpeg' : fileType}`,
+        name: asset.fileName || asset.name || `profile-${Date.now()}.jpg`,
+        type: asset.mimeType || asset.type || 'image/jpeg',
       });
 
-      const response = await api.post('/profiles/photo', formDataObj);
+      const response = await api.post('/profiles/photo?photoIndex=0', formDataObj, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: 120000,
+        transformRequest: data => data,
+      });
 
       await updateUserData({
-        profilePhoto: response.data.profilePhoto,
+        profilePhoto: response.data.profilePhotoUrl || response.data.profilePhoto,
         profileCompletion: response.data.profileCompletion,
       });
 
       Toast.show({ type: 'success', text1: '✅ Photo Updated!' });
     } catch (error) {
+      console.error('Photo upload failed details:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
       Toast.show({
         type: 'error',
         text1: 'Upload Failed',

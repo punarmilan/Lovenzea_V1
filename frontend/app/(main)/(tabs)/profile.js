@@ -340,7 +340,11 @@ export default function Profile() {
   const uploadProfilePhoto = async (asset, index) => {
     try {
       setUploadingPhoto(true);
-      const token = await AsyncStorage.getItem('userToken');
+      console.log("Uploading asset", {
+        uri: asset.uri,
+        name: asset.fileName || asset.name || `photo-${index}-${Date.now()}.jpg`,
+        type: asset.mimeType || asset.type || 'image/jpeg'
+      });
 
       const formData = new FormData();
       formData.append('file', {
@@ -350,12 +354,7 @@ export default function Profile() {
       });
 
       const res = await api.post(`/profiles/photo?photoIndex=${index}`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data',
-        },
         timeout: 120000,
-        transformRequest: data => data,
       });
 
       setProfileData(res.data);
@@ -364,7 +363,7 @@ export default function Profile() {
       }
       Toast.show({ type: 'success', text1: 'Success', text2: 'Photo uploaded successfully' });
     } catch (error) {
-      console.error('Failed to upload photo details:', {
+      console.error("Upload Error", {
         status: error.response?.status,
         data: error.response?.data,
         message: error.message

@@ -72,6 +72,12 @@ export const AuthProvider = ({ children }) => {
     // 2. Upload photo if provided
     if (photoData) {
       try {
+        console.log("Uploading asset", {
+          uri: photoData.uri,
+          name: photoData.name || `profile-${Date.now()}.jpg`,
+          type: photoData.type || 'image/jpeg'
+        });
+
         const photoFormData = new FormData();
         photoFormData.append('file', {
           uri: photoData.uri,
@@ -80,12 +86,7 @@ export const AuthProvider = ({ children }) => {
         });
         
         const photoResponse = await api.post('/profiles/photo?photoIndex=0', photoFormData, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data',
-          },
           timeout: 120000,
-          transformRequest: data => data,
         });
         
         if (photoResponse.data && photoResponse.data.profilePhotoUrl) {
@@ -93,7 +94,7 @@ export const AuthProvider = ({ children }) => {
           userData.profilePhotoUrl = photoResponse.data.profilePhotoUrl;
         }
       } catch (photoError) {
-        console.error('Photo upload failed details:', {
+        console.error("Upload Error", {
           status: photoError.response?.status,
           data: photoError.response?.data,
           message: photoError.message

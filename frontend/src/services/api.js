@@ -19,9 +19,6 @@ export const SOCKJS_URL = `https://app.lovenzea.online/ws`;
 
 const api = axios.create({
   baseURL: BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 api.interceptors.request.use(
@@ -32,6 +29,8 @@ api.interceptors.request.use(
     }
     if (config.data instanceof FormData) {
       delete config.headers['Content-Type'];
+    } else {
+      config.headers['Content-Type'] = 'application/json';
     }
     return config;
   },

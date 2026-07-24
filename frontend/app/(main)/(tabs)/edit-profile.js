@@ -87,7 +87,12 @@ export default function EditProfile() {
   const uploadPhoto = async (asset) => {
     try {
       setUploadingPhoto(true);
-      const token = await AsyncStorage.getItem('userToken');
+      console.log("Uploading asset", {
+        uri: asset.uri,
+        name: asset.fileName || asset.name || `profile-${Date.now()}.jpg`,
+        type: asset.mimeType || asset.type || 'image/jpeg'
+      });
+
       const formDataObj = new FormData();
       formDataObj.append('file', {
         uri: asset.uri,
@@ -96,12 +101,7 @@ export default function EditProfile() {
       });
 
       const response = await api.post('/profiles/photo?photoIndex=0', formDataObj, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data',
-        },
         timeout: 120000,
-        transformRequest: data => data,
       });
 
       await updateUserData({
@@ -111,7 +111,7 @@ export default function EditProfile() {
 
       Toast.show({ type: 'success', text1: '✅ Photo Updated!' });
     } catch (error) {
-      console.error('Photo upload failed details:', {
+      console.error("Upload Error", {
         status: error.response?.status,
         data: error.response?.data,
         message: error.message

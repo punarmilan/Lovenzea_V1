@@ -1,0 +1,170 @@
+.pricing-page-v2 {
+  min-height: 100vh;
+  background-color: #f7f9fa;
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  padding-bottom: 60px;
+}
+
+/* Premium Hero Header */
+.pricing-hero {
+  background: linear-gradient(135deg, #1ebc61 0%, #16a34a 100%);
+  color: white;
+  padding: 60px 20px 100px 20px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.pricing-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.hero-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-top-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 30px;
+}
+
+.personalised-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(5px);
+}
+
+.personalised-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.hero-title {
+  font-size: 38px;
+  font-weight: 800;
+  margin-bottom: 24px;
+  letter-spacing: -1px;
+  line-height: 1.2;
+}
+
+.discount-banner-v3 {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  display: inline-block;
+  padding: 14px 40px;
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.banner-text {
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.5px;
+}
+
+/* Plans Section */
+.plans-section {
+  margin-top: -60px;
+  padding: 0 20px;
+  position: relative;
+  z-index: 2;
+}
+
+.plans-container-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.plans-grid-v2 {
+  display: flex;
+  flex-wrap: wrap; /* Changed from nowrap to wrap */
+  gap: 30px;
+  padding: 40px 20px 60px 20px;
+  justify-content: center; /* Center the cards */
+  align-items: stretch;
+}
+
+@media (min-width: 1280px) {
+  .plans-grid-v2 {
+    justify-content: center; /* Center on large screens */
+  }
+}
+
+/* Hide scrollbar but keep functionality */
+.plans-grid-v2::-webkit-scrollbar {
+  height: 6px;
+}
+
+.plans-grid-v2::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.plans-grid-v2::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+
+.trust-footer {
+  text-align: center;
+  margin-top: 20px;
+  color: #64748b;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.loading-screen {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  gap: 20px;
+  background-color: #f7f9fa;
+}
+
+@media (max-width: 1200px) {
+  .plans-grid-v2 {
+    justify-content: flex-start;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero-title {
+    font-size: 28px;
+    padding: 0 10px;
+  }
+  .banner-text {
+    font-size: 15px;
+  }
+  .pricing-hero {
+    padding: 40px 15px 80px 15px;
+  }
+  .personalised-btn {
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+}

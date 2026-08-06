@@ -1,0 +1,132 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Montserrat:wght@300;400;500;600&display=swap');
+
+.wedding-page {
+  font-family: 'Montserrat', sans-serif;
+  background-color: #FAFAF8;
+  color: #333333;
+}
+
+/* Typography Classes */
+.font-royal {
+  font-family: 'Cinzel', serif;
+}
+.font-editorial {
+  font-family: 'Playfair Display', serif;
+}
+.font-sans-clean {
+  font-family: 'Montserrat', sans-serif;
+}
+
+/* Theme Colors */
+.bg-wedding-cream { background-color: #FAFAF8; }
+.bg-wedding-cream-dark { background-color: #F0EFEA; }
+.bg-wedding-maroon { background-color: #5A1B29; }
+.text-wedding-maroon { color: #5A1B29; }
+.text-wedding-gold { color: #C5A059; }
+.text-wedding-gold-dark { color: #9A7B40; }
+.bg-wedding-gold { background-color: #C5A059; }
+
+.bg-wedding-gold-gradient {
+  background: linear-gradient(135deg, #DFB971 0%, #C5A059 50%, #9A7B40 100%);
+}
+
+/* Buttons */
+.wedding-btn-maroon {
+  background: linear-gradient(to right, #5A1B29, #7A283B);
+  color: #FFFFFF;
+  transition: all 0.5s ease;
+  box-shadow: 0 10px 20px rgba(90, 27, 41, 0.2);
+}
+.wedding-btn-maroon:hover {
+  background: linear-gradient(to right, #7A283B, #5A1B29);
+  transform: translateY(-2px);
+  box-shadow: 0 15px 25px rgba(90, 27, 41, 0.3);
+}
+
+.wedding-btn-gold {
+  background: linear-gradient(135deg, #DFB971, #C5A059);
+  color: #FFFFFF;
+  transition: all 0.5s ease;
+  box-shadow: 0 10px 20px rgba(197, 160, 89, 0.2);
+}
+.wedding-btn-gold:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+  box-shadow: 0 15px 25px rgba(197, 160, 89, 0.3);
+}
+
+/* Glassmorphism */
+.wedding-glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(197, 160, 89, 0.15);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.04);
+}
+
+.wedding-glass-card-hover {
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.wedding-glass-card-hover:hover {
+  transform: translateY(-5px);
+  border-color: rgba(197, 160, 89, 0.4);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.08);
+}
+
+/* Custom Scrollbar for Wedding Page ONLY */
+.wedding-page::-webkit-scrollbar {
+  width: 4px; /* Small size initially */
+}
+
+/* Expand when hovered */
+.wedding-page::-webkit-scrollbar:hover {
+  width: 10px;
+}
+
+.wedding-page::-webkit-scrollbar-track {
+  background: transparent; 
+}
+
+.wedding-page::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.4); /* Faint gray initially */
+  border-radius: 10px;
+}
+
+.wedding-page::-webkit-scrollbar-thumb:hover {
+  background: rgba(107, 114, 128, 0.9); /* Darker gray when hovering the scrollbar */
+}
+
+/* Animations */
+@keyframes slow-pan {
+  0% { transform: scale(1.05) translate(0, 0); }
+  50% { transform: scale(1.1) translate(-1%, -1%); }
+  100% { transform: scale(1.05) translate(0, 0); }
+}
+.animate-slow-pan {
+  animation: slow-pan 20s infinite alternate ease-in-out;
+}
+
+@keyframes float-gentle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.animate-float-gentle {
+  animation: float-gentle 6s infinite ease-in-out;
+}
+
+.timeline-line {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 100%;
+  background: linear-gradient(to bottom, transparent, #C5A059, transparent);
+  z-index: 0;
+}
+
+@media (max-width: 768px) {
+  .timeline-line {
+    left: 20px;
+    transform: none;
+  }
+}

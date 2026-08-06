@@ -1,0 +1,203 @@
+/* Add to your global CSS */
+@supports (-webkit-touch-callout:none) {
+
+	/* iOS Safari specific styles */
+	.bottom-sheet-ios {
+		padding-bottom: env(safe-area-inset-bottom);
+	}
+
+}
+
+::-webkit-scrollbar {
+	display: none;
+}
+
+/* Better scrolling on mobile */
+@media (max-width:768px) {
+	.mobile-scroll {
+		-webkit-overflow-scrolling: touch;
+		scrollbar-width: none;
+	}
+
+	.mobile-scroll::-webkit-scrollbar {
+		display: none;
+	}
+
+}
+
+/* Prevent body scroll when dropdown is open on mobile */
+body.no-scroll {
+	overflow: hidden;
+	position: fixed;
+	width: 100%;
+}
+
+/* Global CSS for better mobile experience */
+.no-scrollbar {
+	-ms-overflow-style: none;     /* IE and Edge */
+	scrollbar-width: none;     /* Firefox */
+}
+
+.no-scrollbar::-webkit-scrollbar {
+	display: none;     /* Chrome, Safari and Opera */
+}
+
+/* Improve touch targets on mobile */
+@media (max-width:768px) {
+	button {
+		min-height: 44px;         /* Apple recommended minimum touch target */
+	}
+
+	/* Prevent text selection on tap */
+	.mobile-tab {
+		-webkit-tap-highlight-color: transparent;
+		user-select: none;
+	}
+
+}
+
+/* Add to your global CSS */
+@supports (-webkit-touch-callout:none) {
+
+	/* iOS Safari specific styles */
+	.bottom-sheet-help {
+		padding-bottom: env(safe-area-inset-bottom);
+	}
+
+}
+
+/* Improve scroll on mobile */
+.help-scroll {
+	-webkit-overflow-scrolling: touch;
+}
+
+/* Prevent body scroll when help is open */
+body.help-open {
+	overflow: hidden;
+	position: fixed;
+	width: 100%;
+	height: 100%;
+}
+
+/* Add these animations to your global CSS or Tailwind config */
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+	}
+
+	to {
+		opacity: 1;
+	}
+
+}
+
+@keyframes slideUp {
+	from {
+		opacity: 0;
+		transform: translateY(20px);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+
+}
+
+.animate-fadeIn {
+	animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slideUp {
+	animation: slideUp 0.4s ease-out;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+	display: none;
+}
+
+.no-scrollbar {
+	-ms-overflow-style: none;
+	scrollbar-width: none;
+}
+@keyframes floatOne {
+	0% {
+		transform: translateY(0px) translateX(0px);
+	}
+
+	50% {
+		transform: translateY(-25px) translateX(-15px);
+	}
+
+	100% {
+		transform: translateY(0px) translateX(0px);
+	}
+}
+
+@keyframes floatTwo {
+	0% {
+		transform: translateY(0px) translateX(0px);
+	}
+
+	50% {
+		transform: translateY(20px) translateX(20px);
+	}
+
+	100% {
+		transform: translateY(0px) translateX(0px);
+	}
+}
+
+@keyframes floatSlow {
+	0% {
+		transform: translateY(0px) translateX(0px);
+	}
+
+	50% {
+		transform: translateY(-15px) translateX(10px);
+	}
+
+	100% {
+		transform: translateY(0px) translateX(0px);
+	}
+}
+
+@keyframes floatSlowReverse {
+	0% {
+		transform: translateY(0px) translateX(0px);
+	}
+
+	50% {
+		transform: translateY(15px) translateX(-10px);
+	}
+
+	100% {
+		transform: translateY(0px) translateX(0px);
+	}
+}
+/* If using Tailwind, add to tailwind.config.js */
+
+/*
+module.exports = {
+  theme: {
+extend: {
+  keyframes: {
+fadeIn: {
+  '0%': { opacity: '0' },
+  '100%': { opacity: '1' },
+},
+slideUp: {
+  '0%': { opacity: '0', transform: 'translateY(20px)' },
+  '100%': { opacity: '1', transform: 'translateY(0)' },
+},
+  },
+  animation: {
+fadeIn: 'fadeIn 0.3s ease-out',
+slideUp: 'slideUp 0.4s ease-out',
+  },
+},
+  },
+}
+*/
+
+/* import img from '../../../assets/image/profile.png' */

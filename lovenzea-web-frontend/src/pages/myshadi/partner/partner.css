@@ -1,0 +1,139 @@
+/* animations.css - Add to your project */
+
+/* Fade In Animation */
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+
+}
+
+.animate-fadeIn {
+	animation: fadeIn 0.4s ease-out;
+}
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+	width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+	background: #f1f5f9;
+	border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+	background: linear-gradient(135deg, #f43f5e 0%, #ec4899 100%);
+	border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+	background: linear-gradient(135deg, #e11d48 0%, #db2777 100%);
+}
+
+/* Line Clamp Utility */
+.line-clamp-2 {
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+/* Smooth Transitions */
+* {
+	-webkit-tap-highlight-color: transparent;
+}
+
+button, a {
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+/* Prevent text selection on interactive elements */
+button:active, a:active {
+	opacity: 0.8;
+}
+
+/* Mobile Optimizations */
+@media (max-width:640px) {
+
+	/* Increase touch target sizes */
+	button {
+		min-height: 44px;
+	}
+
+	input[type="checkbox"] {
+		min-width: 24px;
+		min-height: 24px;
+	}
+
+}
+
+/* Range Slider Custom Styles */
+input[type="range"]::-moz-range-thumb {
+	width: 24px;
+	height: 24px;
+	background: white;
+	border: 4px solid #3b82f6;
+	border-radius: 50%;
+	cursor: pointer;
+	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+input[type="range"]::-moz-range-track {
+	height: 8px;
+	background: #e5e7eb;
+	border-radius: 4px;
+}
+
+/* Firefox scrollbar */
+* {
+	scrollbar-width: thin;
+	scrollbar-color: #f43f5e #f1f5f9;
+}
+
+/* Smooth page transitions */
+.page-transition {
+	animation: fadeIn 0.3s ease-out;
+}
+
+/* Loading skeleton */
+@keyframes shimmer {
+	0% {
+		background-position: -1000px 0;
+	}
+
+	100% {
+		background-position: 1000px 0;
+	}
+
+}
+
+.skeleton {
+	animation: shimmer 2s infinite;
+	background: linear-gradient(to right, #f0f0f0 0%, #f8f8f8 50%, #f0f0f0 100%);
+	background-size: 1000px 100%;
+}
+
+/* Accessibility - Focus visible */
+*:focus-visible {
+	outline: 2px solid #f43f5e;
+	outline-offset: 2px;
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion:reduce) {
+	*, *::before, *::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+
+}

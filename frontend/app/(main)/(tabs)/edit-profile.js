@@ -13,12 +13,13 @@ import {
 } from 'react-native';
 import { useAuth } from '../../../src/context/AuthContext';
 import { Colors, Spacing, Typography, Shadows } from '../../../src/constants/Theme';
-import api from '../../../src/services/api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import api, { uploadProfilePhotoApi } from '../../../src/services/api';
 import Toast from 'react-native-toast-message';
+import { normalizePhotoUrl, getFallbackAvatar } from '../../../src/utils/imageUrl';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, Camera, Save } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const FALLBACK_AVATAR = 'https://ui-avatars.com/api/?background=E91E63&color=fff&name=';
 
@@ -27,10 +28,12 @@ export default function EditProfile() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [localPhoto, setLocalPhoto] = useState(user?.profilePhoto || null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [localPhoto, setLocalPhoto] = useState(normalizePhotoUrl(user?.profilePhoto || user?.profilePhotoUrl) || null);
   const [formData, setFormData] = useState({
     name: user?.name || '',
     phone: user?.phone || '',
+    dob: user?.dob || '',
     religion: user?.religion || '',
     caste: user?.caste || '',
     motherTongue: user?.motherTongue || '',
@@ -56,9 +59,8 @@ export default function EditProfile() {
     let result;
     const options = {
       mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
+      allowsEditing: false,
+      quality: 0.3,
     };
 
     if (source === 'camera') {
@@ -87,39 +89,33 @@ export default function EditProfile() {
   const uploadPhoto = async (asset) => {
     try {
       setUploadingPhoto(true);
-      console.log("Uploading asset", {
-        uri: asset.uri,
-        name: asset.fileName || asset.name || `profile-${Date.now()}.jpg`,
-        type: asset.mimeType || asset.type || 'image/jpeg'
-      });
 
-      const formDataObj = new FormData();
-      formDataObj.append('file', {
-        uri: asset.uri,
-        name: asset.fileName || asset.name || `profile-${Date.now()}.jpg`,
-        type: asset.mimeType || asset.type || 'image/jpeg',
-      });
-
-      const response = await api.post('/profiles/photo?photoIndex=0', formDataObj, {
-        timeout: 120000,
-      });
+      const responseData = await uploadProfilePhotoApi(asset, 0);
 
       await updateUserData({
-        profilePhoto: response.data.profilePhotoUrl || response.data.profilePhoto,
-        profileCompletion: response.data.profileCompletion,
+        profilePhoto: responseData?.profilePhotoUrl || responseData?.profilePhoto,
+        profileCompletion: responseData?.profileCompletion,
       });
 
       Toast.show({ type: 'success', text1: '✅ Photo Updated!' });
     } catch (error) {
-      console.error("Upload Error", {
+      const backendError = error.response?.data;
+      console.error('[EditProfile] Upload Error:', {
         status: error.response?.status,
-        data: error.response?.data,
-        message: error.message
+        backendMessage: backendError?.message || backendError,
+        message: error.message,
       });
+
+      const displayMessage =
+        backendError?.message ||
+        (typeof backendError === 'string' ? backendError : null) ||
+        error.message ||
+        'Could not upload photo';
+
       Toast.show({
         type: 'error',
         text1: 'Upload Failed',
-        text2: error.response?.data?.message || 'Try again',
+        text2: displayMessage,
       });
       // Revert preview on failure
       setLocalPhoto(user?.profilePhoto || null);
@@ -150,6 +146,37 @@ export default function EditProfile() {
 
   // ─── Reusable Input ────────────────────────────────────────────────────────
 
+  const handleDateChange = (event, selectedDate) => {
+    if (Platform.OS === 'android') setShowDatePicker(false);
+    if (selectedDate) {
+      const today = new Date();
+      let age = today.getFullYear() - selectedDate.getFullYear();
+      const m = today.getMonth() - selectedDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < selectedDate.getDate())) {
+        age--;
+      }
+      if (age < 18) {
+        Toast.show({ type: 'error', text1: 'Age Restriction', text2: 'You must be at least 18 years old.' });
+        return;
+      }
+      setFormData((prev) => ({ ...prev, dob: selectedDate.toISOString().split('T')[0] }));
+    }
+  };
+
+  const DateField = ({ label, fieldKey, placeholder }) => (
+    <View style={styles.fieldGroup}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <TouchableOpacity 
+        style={[styles.fieldInput, { justifyContent: 'center' }]} 
+        onPress={() => setShowDatePicker(true)}
+      >
+        <Text style={{ color: formData[fieldKey] ? Colors.text : Colors.border, fontSize: 15 }}>
+          {formData[fieldKey] || placeholder}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   const Field = ({ label, fieldKey, placeholder, multiline = false, keyboardType = 'default' }) => (
     <View style={styles.fieldGroup}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -168,8 +195,8 @@ export default function EditProfile() {
 
   // ─── Derived ───────────────────────────────────────────────────────────────
   const avatarUri = localPhoto
-    ? localPhoto
-    : `${FALLBACK_AVATAR}${encodeURIComponent(user?.name || 'User')}`;
+    ? (localPhoto.startsWith('file://') || localPhoto.startsWith('content://') ? localPhoto : normalizePhotoUrl(localPhoto))
+    : getFallbackAvatar(user);
 
   const completion = user?.profileCompletion || 30;
 
@@ -203,7 +230,11 @@ export default function EditProfile() {
         {/* ── Avatar Section ── */}
         <View style={styles.avatarSection}>
           <View style={styles.avatarWrapper}>
-            <Image source={{ uri: avatarUri }} style={styles.avatar} />
+            <Image 
+              source={{ uri: avatarUri }} 
+              style={styles.avatar} 
+              onError={(e) => console.log('Image failed:', avatarUri, e.nativeEvent)}
+            />
             {uploadingPhoto && (
               <View style={styles.uploadOverlay}>
                 <ActivityIndicator size="large" color={Colors.white} />
@@ -233,7 +264,23 @@ export default function EditProfile() {
         <SectionHeader title="Basic Information" emoji="👤" />
         <Field label="Full Name" fieldKey="name" placeholder="Your full name" />
         <Field label="Phone Number" fieldKey="phone" placeholder="+91 XXXXX XXXXX" keyboardType="phone-pad" />
+        <DateField label="Born" fieldKey="dob" placeholder="YYYY-MM-DD" />
         <Field label="Mother Tongue" fieldKey="motherTongue" placeholder="e.g. Hindi, Marathi" />
+
+        {showDatePicker && (
+          <DateTimePicker
+            value={formData.dob ? new Date(formData.dob) : new Date(new Date().setFullYear(new Date().getFullYear() - 18))}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={handleDateChange}
+            maximumDate={new Date()}
+          />
+        )}
+        {Platform.OS === 'ios' && showDatePicker && (
+          <TouchableOpacity onPress={() => setShowDatePicker(false)} style={{ alignSelf: 'flex-end', marginRight: Spacing.m }}>
+            <Text style={{ color: Colors.primary, fontWeight: 'bold' }}>Done</Text>
+          </TouchableOpacity>
+        )}
 
         {/* ── Religion ── */}
         <SectionHeader title="Religious Background" emoji="🕌" />

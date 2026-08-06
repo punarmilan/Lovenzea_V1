@@ -18,6 +18,7 @@ import { ChevronLeft, Search, MapPin, Send, MessageCircle, RefreshCw, X, Heart, 
 import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import api, { LOCAL_IP } from '../../../src/services/api';
+import { normalizePhotoUrl, getFallbackAvatar } from '../../../src/utils/imageUrl';
 
 const { width } = Dimensions.get('window');
 
@@ -36,15 +37,12 @@ export default function SentInterestsScreen() {
     setLoading(true);
     try {
       let response;
-      try {
-        response = await api.get('/connections/sent');
-      } catch (e) {
-        response = await api.get('/connection-requests/sent');
-      }
+      response = await api.get('/connections/sent');
       const list = response.data || [];
       const formatted = list.map((item, idx) => {
         const profile = item.receiverProfile || {};
-        const fixedUrl = profile.profilePhotoUrl ? profile.profilePhotoUrl.replace('localhost', LOCAL_IP) : null;
+        const photo = profile.profilePhotoUrl || profile.profilePhoto;
+        const normalizedUrl = normalizePhotoUrl(photo);
         const heightVal = profile.height || '165';
         const heightFt = (parseFloat(heightVal) / 30.48).toFixed(1);
 
@@ -61,7 +59,7 @@ export default function SentInterestsScreen() {
           heightCm: heightVal,
           heightFt: heightFt,
           status: item.status || 'PENDING',
-          image: fixedUrl ? { uri: fixedUrl } : require('../../../assets/images/female_avatar.png'),
+          image: { uri: getFallbackAvatar(profile) },
         };
       });
       setSentInterests(formatted);
@@ -76,16 +74,13 @@ export default function SentInterestsScreen() {
     setLoading(true);
     try {
       let response;
-      try {
-        response = await api.get('/connections/received');
-      } catch (e) {
-        response = await api.get('/connection-requests/received');
-      }
+      response = await api.get('/connections/received');
       const list = response.data || [];
       console.log('--- RECEIVED INTERESTS FROM API ---', list);
       const formatted = list.map((item, idx) => {
         const profile = item.senderProfile || {};
-        const fixedUrl = profile.profilePhotoUrl ? profile.profilePhotoUrl.replace('localhost', LOCAL_IP) : null;
+        const photo = profile.profilePhotoUrl || profile.profilePhoto;
+        const normalizedUrl = normalizePhotoUrl(photo);
         const heightVal = profile.height || '165';
         const heightFt = (parseFloat(heightVal) / 30.48).toFixed(1);
 
@@ -102,7 +97,7 @@ export default function SentInterestsScreen() {
           heightCm: heightVal,
           heightFt: heightFt,
           status: item.status || 'PENDING',
-          image: fixedUrl ? { uri: fixedUrl } : require('../../../assets/images/female_avatar.png'),
+          image: { uri: getFallbackAvatar(profile) },
         };
       });
       setReceivedInterests(formatted);
@@ -118,7 +113,8 @@ export default function SentInterestsScreen() {
       const response = await api.get('/shortlist/my');
       const list = response.data || [];
       const formatted = list.map((profile, idx) => {
-        const fixedUrl = profile.profilePhotoUrl ? profile.profilePhotoUrl.replace('localhost', LOCAL_IP) : null;
+        const photo = profile.profilePhotoUrl || profile.profilePhoto;
+        const normalizedUrl = normalizePhotoUrl(photo);
         const heightVal = profile.height || '165';
         const heightFt = (parseFloat(heightVal) / 30.48).toFixed(1);
         return {
@@ -131,7 +127,7 @@ export default function SentInterestsScreen() {
           occupation: profile.occupation || 'Professional',
           heightCm: heightVal,
           heightFt: heightFt,
-          image: fixedUrl ? { uri: fixedUrl } : require('../../../assets/images/female_avatar.png'),
+          image: { uri: getFallbackAvatar(profile) },
         };
       });
       setShortlisted(formatted);
@@ -200,7 +196,11 @@ export default function SentInterestsScreen() {
       activeOpacity={0.92}
       onPress={() => router.push({ pathname: '/user-details', params: { userId: item.userId } })}
     >
-      <Image source={item.image} style={styles.shortlistImage} />
+      <Image 
+        source={item.image} 
+        style={styles.shortlistImage} 
+        onError={(e) => console.log('Image failed:', item.image?.uri, e.nativeEvent)} 
+      />
       <LinearGradient
         colors={['transparent', 'rgba(30,8,18,0.85)']}
         style={styles.shortlistGradient}
@@ -215,7 +215,22 @@ export default function SentInterestsScreen() {
         <View style={styles.shortlistActions}>
           <TouchableOpacity
             style={styles.shortlistChatBtn}
-            onPress={(e) => { e.stopPropagation(); router.push({ pathname: `/chat/${item.userId}`, params: { name: item.name } }); }}
+            onPress={(e) => {
+              e.stopPropagation();
+              console.log('Opening chat:', {
+                targetUserId: item.userId,
+                name: item.name,
+                route: '/chat/[id]',
+              });
+              router.push({
+                pathname: '/chat/[id]',
+                params: {
+                  id: String(item.userId),
+                  name: item.name,
+                  photo: item.image?.uri || ''
+                }
+              });
+            }}
           >
             <MessageCircle size={13} color="#FFF" />
             <Text style={styles.shortlistChatBtnText}>Chat</Text>
@@ -240,7 +255,11 @@ export default function SentInterestsScreen() {
         onPress={() => router.push({ pathname: '/user-details', params: { userId: item.userId } })}
       >
         <View style={styles.imageWrapper}>
-          <Image source={item.image} style={styles.cardImage} />
+          <Image 
+            source={item.image} 
+            style={styles.cardImage} 
+            onError={(e) => console.log('Image failed:', item.image?.uri, e.nativeEvent)} 
+          />
           <View style={styles.occupationOverlay}>
             <Text style={styles.occupationText} numberOfLines={1}>{item.occupation}</Text>
           </View>
@@ -264,9 +283,18 @@ export default function SentInterestsScreen() {
                 style={styles.chatCircle}
                 onPress={(e) => {
                   e.stopPropagation();
+                  console.log('Opening chat:', {
+                    targetUserId: item.userId,
+                    name: item.name,
+                    route: '/chat/[id]',
+                  });
                   router.push({
-                    pathname: `/chat/${item.userId}`,
-                    params: { name: item.name }
+                    pathname: '/chat/[id]',
+                    params: {
+                      id: String(item.userId),
+                      name: item.name,
+                      photo: item.image?.uri || ''
+                    }
                   });
                 }}
               >

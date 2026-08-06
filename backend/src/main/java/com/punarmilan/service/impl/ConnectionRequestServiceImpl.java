@@ -53,6 +53,7 @@ public class ConnectionRequestServiceImpl implements ConnectionRequestService {
         log.info("User {} withdrawing CONNECTION request from profile {}", sender.getId(), receiverProfileId);
         
         Profile receiverProfile = profileRepository.findById(receiverProfileId)
+                .or(() -> profileRepository.findByUserId(receiverProfileId))
                 .orElseThrow(() -> new ResourceNotFoundException("Receiver profile not found"));
                 
         User receiver = receiverProfile.getUser();
@@ -71,6 +72,7 @@ public class ConnectionRequestServiceImpl implements ConnectionRequestService {
         log.info("User {} sending {} request to profile {}", sender.getId(), type, receiverProfileId);
 
         Profile receiverProfile = profileRepository.findById(receiverProfileId)
+                .or(() -> profileRepository.findByUserId(receiverProfileId))
                 .orElseThrow(() -> new ResourceNotFoundException("Receiver profile not found"));
 
         User receiver = receiverProfile.getUser();

@@ -179,9 +179,6 @@ export default function Login() {
                 <TouchableOpacity style={styles.socialBtn}>
                   <Text style={styles.socialBtnText}>Google</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.socialBtn}>
-                  <Text style={styles.socialBtnText}>Facebook</Text>
-                </TouchableOpacity>
               </View>
             </Animated.View>
 

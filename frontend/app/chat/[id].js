@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Image, ImageBackground, Modal } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Image, ImageBackground, Modal, Alert, ActionSheetIOS } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Colors, Spacing, Typography, Shadows } from '../../src/constants/Theme';
-import { Send, ChevronLeft, Check, CheckCheck } from 'lucide-react-native';
+import { Send, ChevronLeft, Check, CheckCheck, MoreVertical, Trash2 } from 'lucide-react-native';
 import { useAuth } from '../../src/context/AuthContext';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
@@ -11,9 +11,21 @@ import 'text-encoding';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SOCKJS_URL } from '../../src/services/api';
 import api from '../../src/services/api';
+import { normalizePhotoUrl, getFallbackAvatar } from '../../src/utils/imageUrl';
 
 export default function ChatRoom() {
-  const { id, name, photo } = useLocalSearchParams();
+  const params = useLocalSearchParams();
+  console.log('Chat route params:', params);
+
+  const targetUserId = params.userId || params.id;
+  const conversationId = params.conversationId || '';
+  const name = params.name || 'User';
+  const photo = params.photo || '';
+
+  const getParamValue = (value) => Array.isArray(value) ? value[0] : value;
+  const resolvedUserId = getParamValue(targetUserId);
+  const resolvedConversationId = getParamValue(conversationId);
+
   const { user } = useAuth();
   const myId = user?.id || user?._id;
   
@@ -23,6 +35,7 @@ export default function ChatRoom() {
   const [isOnline, setIsOnline] = useState(false);
   const [showPremiumPopup, setShowPremiumPopup] = useState(false);
   const [premiumErrorMsg, setPremiumErrorMsg] = useState('');
+  const [showOptions, setShowOptions] = useState(false);
   const stompClient = useRef(null);
   const flatListRef = useRef(null);
   const router = useRouter();
@@ -41,14 +54,15 @@ export default function ChatRoom() {
 
   const fetchMessages = async () => {
     try {
-      const response = await api.get(`/chat/history/${id}`);
+      if (!resolvedUserId) return;
+      const response = await api.get(`/chat/history/${resolvedUserId}`);
       let msgs = response.data.content || response.data || [];
       // Sort messages descending for inverted FlatList (newest first)
       const sorted = msgs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       setMessages(sorted);
       
       // Mark conversation as read
-      await api.patch(`/chat/read/all/${id}`);
+      await api.patch(`/chat/read/all/${resolvedUserId}`);
     } catch (error) {
       console.error('Fetch messages error:', error);
     }
@@ -82,8 +96,24 @@ export default function ChatRoom() {
             }
             
             // If the message is part of this conversation
-            if (msg.senderId?.toString() === id?.toString() || msg.senderId?.toString() === myId?.toString()) {
-              setMessages((prev) => [msg, ...prev.filter(m => m.id !== msg.id && m.id !== msg.tempId)]);
+            if (msg.senderId?.toString() === resolvedUserId?.toString() || msg.senderId?.toString() === myId?.toString()) {
+              setMessages((prev) => {
+                // If this is a message we sent, remove the optimistic temp message
+                if (msg.senderId?.toString() === myId?.toString()) {
+                  const optIndex = prev.findIndex(m => m.tempId && m.content === msg.content);
+                  if (optIndex !== -1) {
+                    const newMsgs = [...prev];
+                    newMsgs[optIndex] = msg; // Replace optimistic message with real message
+                    return newMsgs;
+                  }
+                }
+                
+                // If it's a new incoming message or we couldn't match the optimistic one, add it
+                if (prev.some(m => m.id === msg.id)) {
+                  return prev; // Already exists
+                }
+                return [msg, ...prev];
+              });
               
               // If it's from the other person, mark it read
               if (msg.senderId?.toString() !== myId?.toString()) {
@@ -111,11 +141,11 @@ export default function ChatRoom() {
   };
 
   const sendMessage = () => {
-    if (!input.trim() || !id) return;
+    if (!input.trim() || !resolvedUserId) return;
 
     if (stompClient.current && stompClient.current.connected) {
       const messageObj = {
-        recipientId: parseInt(id),
+        recipientId: parseInt(resolvedUserId),
         content: input,
       };
 
@@ -125,7 +155,7 @@ export default function ChatRoom() {
         id: tempId,
         tempId: tempId,
         senderId: myId,
-        recipientId: id,
+        recipientId: resolvedUserId,
         content: input,
         createdAt: new Date().toISOString(),
         read: false
@@ -143,44 +173,98 @@ export default function ChatRoom() {
     }
   };
 
+  const handleDeleteConversation = () => {
+    Alert.alert(
+      'Delete Conversation',
+      'This will permanently delete all messages in this chat. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete(`/chat/conversation/${resolvedUserId}`);
+              setMessages([]);
+              setShowOptions(false);
+              router.back();
+            } catch (err) {
+              console.error('Delete conversation error:', err);
+              Alert.alert('Error', 'Could not delete conversation. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeleteMessage = (messageId) => {
+    Alert.alert(
+      'Delete Message',
+      'Delete this message for both you and the other person?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete(`/chat/message/${messageId}`);
+              setMessages(prev => prev.filter(m => m.id !== messageId));
+            } catch (err) {
+              console.error('Delete message error:', err);
+              Alert.alert('Error', 'Could not delete message.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const renderMessage = ({ item, index }) => {
     const isMe = item.senderId?.toString() === myId?.toString();
     const prevMessage = messages[index - 1];
     const isConsecutive = prevMessage && prevMessage.senderId?.toString() === item.senderId?.toString();
 
     return (
-      <View style={[styles.messageRow, isMe ? styles.messageRowMe : styles.messageRowTheir]}>
-        <View style={[
-          styles.messageBubble, 
-          isMe ? styles.myMessage : styles.theirMessage,
-          !isConsecutive && isMe ? styles.myMessageTail : null,
-          !isConsecutive && !isMe ? styles.theirMessageTail : null
-        ]}>
-          <Text style={[styles.messageText, isMe ? styles.myMessageText : styles.theirMessageText]}>
-            {item.content}
-          </Text>
-          <View style={styles.messageFooter}>
-            <Text style={[styles.timeText, isMe ? styles.myTime : styles.theirTime]}>
-              {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onLongPress={() => {
+          if (item.id) handleDeleteMessage(item.id);
+        }}
+        delayLongPress={400}
+      >
+        <View style={[styles.messageRow, isMe ? styles.messageRowMe : styles.messageRowTheir]}>
+          <View style={[
+            styles.messageBubble, 
+            isMe ? styles.myMessage : styles.theirMessage,
+            !isConsecutive && isMe ? styles.myMessageTail : null,
+            !isConsecutive && !isMe ? styles.theirMessageTail : null
+          ]}>
+            <Text style={[styles.messageText, isMe ? styles.myMessageText : styles.theirMessageText]}>
+              {item.content}
             </Text>
-            {isMe && (
-              <View style={styles.readReceipt}>
-                {item.read ? (
-                  <CheckCheck size={14} color="#C9748A" />
-                ) : (
-                  <Check size={14} color="rgba(255,255,255,0.7)" />
-                )}
-              </View>
-            )}
+            <View style={styles.messageFooter}>
+              <Text style={[styles.timeText, isMe ? styles.myTime : styles.theirTime]}>
+                {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </Text>
+              {isMe && (
+                <View style={styles.readReceipt}>
+                  {item.read ? (
+                    <CheckCheck size={14} color="#C9748A" />
+                  ) : (
+                    <Check size={14} color="rgba(255,255,255,0.7)" />
+                  )}
+                </View>
+              )}
+            </View>
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
-  const avatarUri = photo
-    ? photo
-    : `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'User')}&background=E91E63&color=fff&size=100`;
+  const avatarUri = getFallbackAvatar({ name, profilePhoto: photo });
 
   const screenContent = (
     <ImageBackground 
@@ -193,7 +277,11 @@ export default function ChatRoom() {
           <ChevronLeft size={24} color={Colors.text} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Image source={{ uri: avatarUri }} style={styles.headerAvatar} />
+          <Image 
+            source={{ uri: avatarUri }} 
+            style={styles.headerAvatar} 
+            onError={(e) => console.log('Image failed:', avatarUri, e.nativeEvent)} 
+          />
           <View>
             <Text style={styles.headerTitle}>{name}</Text>
             <Text style={[styles.headerStatus, isOnline ? styles.onlineColor : styles.offlineColor]}>
@@ -201,7 +289,9 @@ export default function ChatRoom() {
             </Text>
           </View>
         </View>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity style={styles.optionsBtn} onPress={() => setShowOptions(true)}>
+          <MoreVertical size={22} color={Colors.text} />
+        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -214,7 +304,7 @@ export default function ChatRoom() {
         showsVerticalScrollIndicator={false}
       />
 
-      <View style={[styles.inputWrapper, { paddingBottom: Math.max(insets.bottom, Spacing.m) }]}>
+      <View style={styles.inputWrapper}>
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
@@ -239,13 +329,39 @@ export default function ChatRoom() {
   return (
     <KeyboardAvoidingView 
       style={{ flex: 1, backgroundColor: '#FFF6F5' }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={0}
     >
-      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
         {screenContent}
       </SafeAreaView>
 
+      {/* Options Menu Modal */}
+      <Modal
+        visible={showOptions}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowOptions(false)}
+      >
+        <TouchableOpacity 
+          style={styles.optionsOverlay} 
+          activeOpacity={1}
+          onPress={() => setShowOptions(false)}
+        >
+          <View style={styles.optionsMenu}>
+            <Text style={styles.optionsTitle}>Chat Options</Text>
+            <TouchableOpacity style={styles.optionsItem} onPress={handleDeleteConversation}>
+              <Trash2 size={18} color="#E53935" />
+              <Text style={[styles.optionsItemText, { color: '#E53935' }]}>Delete Conversation</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.optionsItem, { borderTopWidth: 1, borderTopColor: '#F0F0F0' }]} onPress={() => setShowOptions(false)}>
+              <Text style={[styles.optionsItemText, { color: '#666', textAlign: 'center', flex: 1 }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Premium Upgrade Modal */}
       <Modal
         visible={showPremiumPopup}
         transparent={true}
@@ -339,6 +455,42 @@ const styles = StyleSheet.create({
   backBtn: {
     padding: Spacing.s,
   },
+  optionsBtn: {
+    padding: Spacing.s,
+    width: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  optionsOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  optionsMenu: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 16,
+    paddingBottom: 32,
+  },
+  optionsTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.text,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  optionsItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+  },
+  optionsItemText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
   messageList: {
     paddingHorizontal: Spacing.m,
     paddingBottom: Spacing.m,
@@ -421,6 +573,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     paddingHorizontal: Spacing.s,
     paddingTop: Spacing.s,
+    paddingBottom: 10,
     backgroundColor: 'transparent',
   },
   inputContainer: {

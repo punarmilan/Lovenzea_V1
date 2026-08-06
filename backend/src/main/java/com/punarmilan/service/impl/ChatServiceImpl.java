@@ -131,6 +131,28 @@ public class ChatServiceImpl implements ChatService {
         return chatMessageRepository.countByRecipientAndReadFalse(user);
     }
 
+    @Override
+    @Transactional
+    public void deleteMessage(Long messageId, User user) {
+        ChatMessage message = chatMessageRepository.findById(messageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Message not found"));
+        // Only sender or recipient can delete a message
+        if (!message.getSender().getId().equals(user.getId()) && !message.getRecipient().getId().equals(user.getId())) {
+            throw new com.punarmilan.exception.UnauthorizedException("Not authorized to delete this message");
+        }
+        chatMessageRepository.delete(message);
+        log.info("Deleted message {} by user {}", messageId, user.getId());
+    }
+
+    @Override
+    @Transactional
+    public void deleteConversation(User user, Long partnerId) {
+        User partner = userRepository.findById(partnerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Partner not found"));
+        chatMessageRepository.deleteConversation(user, partner);
+        log.info("Deleted conversation between user {} and partner {}", user.getId(), partnerId);
+    }
+
     private ChatMessageDTO toDTO(ChatMessage m) {
         return ChatMessageDTO.builder()
                 .id(m.getId())

@@ -118,4 +118,18 @@ public class ChatController {
         chatService.markConversationAsRead(partner, currentUser);
         return ResponseEntity.ok().build();
     }
+
+    @DeleteMapping("/message/{messageId}")
+    public ResponseEntity<Void> deleteMessage(@PathVariable Long messageId) {
+        User currentUser = authUtil.getCurrentUser();
+        chatService.deleteMessage(messageId, currentUser);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/conversation/{partnerId}")
+    public ResponseEntity<Void> deleteConversation(@PathVariable Long partnerId) {
+        User currentUser = authUtil.getCurrentUser();
+        chatService.deleteConversation(currentUser, partnerId);
+        return ResponseEntity.ok().build();
+    }
 }

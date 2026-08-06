@@ -65,7 +65,7 @@ export default function Register() {
   };
 
   const openPicker = async (source) => {
-    const options = { mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.7 };
+    const options = { mediaTypes: ['images'], allowsEditing: false, quality: 0.3 };
     let result;
     if (source === 'camera') {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -101,10 +101,6 @@ export default function Register() {
     }
     if (password.length < 6) {
       Toast.show({ type: 'error', text1: 'Weak Password', text2: 'Password must be at least 6 characters long' });
-      return;
-    }
-    if (!photoData) {
-      Toast.show({ type: 'error', text1: 'Profile Photo Required', text2: 'Please tap the avatar to add a photo' });
       return;
     }
 
@@ -169,11 +165,15 @@ export default function Register() {
               <View style={styles.avatarSection}>
                 <TouchableOpacity onPress={handlePickImage} style={styles.avatarWrapper} activeOpacity={0.8}>
                   {photoData ? (
-                    <Image source={{ uri: photoData.uri }} style={styles.avatar} />
+                    <Image 
+                      source={{ uri: photoData.uri }} 
+                      style={styles.avatar} 
+                      onError={(e) => console.log('Image failed:', photoData.uri, e.nativeEvent)}
+                    />
                   ) : (
                     <View style={[styles.avatar, styles.avatarPlaceholder]}>
                       <Camera size={32} color="#F5E6E8" />
-                      <Text style={styles.avatarPlaceholderText}>Add Photo</Text>
+                      <Text style={styles.avatarPlaceholderText}>Add Photo (Optional)</Text>
                     </View>
                   )}
                   <View style={styles.cameraBtn}>

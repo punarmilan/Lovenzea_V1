@@ -37,4 +37,11 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     void markConversationAsRead(@Param("sender") User sender, @Param("recipient") User recipient);
 
     List<ChatMessage> findBySenderAndRecipientAndReadFalse(User sender, User recipient);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    @Query("DELETE FROM ChatMessage m WHERE " +
+            "(m.sender = :user1 AND m.recipient = :user2) OR " +
+            "(m.sender = :user2 AND m.recipient = :user1)")
+    void deleteConversation(@Param("user1") User user1, @Param("user2") User user2);
 }

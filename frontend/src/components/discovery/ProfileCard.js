@@ -7,6 +7,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { normalizePhotoUrl, getFallbackAvatar } from '../../utils/imageUrl';
 import { Colors, Spacing, Typography, Shadows } from '../../constants/Theme';
 import { CheckCircle, Wifi, Info } from 'lucide-react-native';
 
@@ -14,9 +15,7 @@ const { width, height } = Dimensions.get('window');
 const CARD_HEIGHT = height * 0.78;
 
 const ProfileCard = ({ user, onConnect, onDetails }) => {
-  const getFallbackUri = (item) =>
-    item.profilePhoto ||
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name || 'User')}&background=E91E63&color=fff&size=600`;
+  const getFallbackUri = (item) => getFallbackAvatar(item);
 
   const age = user.dob
     ? new Date().getFullYear() - new Date(user.dob).getFullYear()
@@ -42,6 +41,7 @@ const ProfileCard = ({ user, onConnect, onDetails }) => {
             style={styles.image}
             contentFit="cover"
             transition={600}
+            onError={(e) => console.log('[ProfileCard] Image failed:', getFallbackUri(user), e)}
           />
 
           {/* Info button top right */}

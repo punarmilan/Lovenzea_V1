@@ -35,6 +35,7 @@ import {
 } from 'lucide-react-native';
 import api from '../../../src/services/api';
 import Toast from 'react-native-toast-message';
+import { normalizePhotoUrl, getFallbackAvatar } from '../../../src/utils/imageUrl';
 
 const { width, height } = Dimensions.get('window');
 
@@ -101,7 +102,7 @@ export default function UserDetails() {
 
   const checkInterestStatus = async () => {
     try {
-      const res = await api.get('/connection-requests/sent');
+      const res = await api.get('/connections/sent');
       const request = res.data.find(req => req.receiverId === parseInt(userId, 10));
       if (request) {
         setInterestStatus(request.status);
@@ -116,7 +117,7 @@ export default function UserDetails() {
     try {
       // Optimistic update
       setInterestStatus('PENDING');
-      const res = await api.post(`/connection-requests/send/${userId}`);
+      const res = await api.post(`/connections/send/${userId}`);
       setInterestId(res.data.id);
       Toast.show({ type: 'success', text1: 'Success', text2: 'Interest sent successfully!' });
     } catch (error) {
@@ -142,18 +143,19 @@ export default function UserDetails() {
     profile.photoUrl4,
     profile.photoUrl5,
     profile.photoUrl6
-  ].filter(Boolean);
+  ].filter(Boolean).map(url => normalizePhotoUrl(url)).filter(Boolean);
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
         
         {/* ─── Header Image Backdrop ─── */}
         <View style={styles.imageBackdropContainer}>
           <Image 
-            source={profile.profilePhotoUrl ? { uri: profile.profilePhotoUrl } : require('../../../assets/images/female_avatar.png')} 
+            source={{ uri: getFallbackAvatar(profile) }} 
             style={styles.backdropImage} 
             resizeMode="cover"
+            onError={(e) => console.log('Image failed:', getFallbackAvatar(profile), e.nativeEvent)}
           />
           <LinearGradient
             colors={['transparent', 'rgba(255, 255, 255, 0.3)', 'rgba(255, 255, 255, 0.95)', '#FFF']}
@@ -244,7 +246,11 @@ export default function UserDetails() {
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.albumScroll}>
                 {albumPhotos.map((url, index) => (
                   <View key={index} style={styles.albumPhotoWrapper}>
-                    <Image source={{ uri: url }} style={styles.albumImage} />
+                    <Image
+                      source={{ uri: url }}
+                      style={styles.albumImage}
+                      onError={(e) => console.log('[UserDetails] Album image failed:', url, e.nativeEvent)}
+                    />
                   </View>
                 ))}
               </ScrollView>

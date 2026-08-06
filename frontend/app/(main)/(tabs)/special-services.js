@@ -13,6 +13,7 @@ import {
   TextInput,
   StatusBar,
   Animated,
+  Alert
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useNavigation } from 'expo-router';
@@ -164,6 +165,48 @@ export default function SpecialServices() {
         },
         theme: { color: '#E88A9A' }
       };
+
+      if (!RazorpayCheckout || typeof RazorpayCheckout.open !== 'function') {
+        Alert.alert(
+          'SDK Mode / Expo Go Detected',
+          'Razorpay Native Checkout is unavailable in Expo Go. Would you like to use simulated success for testing?',
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+              onPress: () => setLoadingPayment(null)
+            },
+            {
+              text: 'Simulate Success',
+              onPress: async () => {
+                try {
+                  await api.post('/payments/verify', {
+                    razorpayOrderId: orderId,
+                    razorpayPaymentId: 'pay_simulated_' + Math.random().toString(36).substring(7),
+                    razorpaySignature: 'sig_simulated_' + Math.random().toString(36).substring(7)
+                  });
+                  
+                  Toast.show({
+                    type: 'success',
+                    text1: 'Simulated Payment Successful',
+                    text2: `You are now enrolled in the ${selectedPkg.name}.`
+                  });
+                } catch (simError) {
+                  console.error('Simulated payment verification failed:', simError);
+                  Toast.show({
+                    type: 'error',
+                    text1: 'Verification Failed',
+                    text2: 'Failed to verify simulated payment.'
+                  });
+                } finally {
+                  setLoadingPayment(null);
+                }
+              }
+            }
+          ]
+        );
+        return;
+      }
 
       RazorpayCheckout.open(options).then(async (data) => {
         await api.post('/payments/verify', {

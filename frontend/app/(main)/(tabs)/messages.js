@@ -1,64 +1,248 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, RefreshControl, ScrollView } from 'react-native';
 import { Colors, Spacing, Typography, Shadows } from '../../../src/constants/Theme';
 import { useRouter } from 'expo-router';
 import api from '../../../src/services/api';
 import { useAuth } from '../../../src/context/AuthContext';
 import Toast from 'react-native-toast-message';
+import { normalizePhotoUrl, getFallbackAvatar } from '../../../src/utils/imageUrl';
 
 export default function Messages() {
   const router = useRouter();
   const { user: currentUser } = useAuth();
   const [chats, setChats] = useState([]);
+  const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    fetchChats();
+    fetchData();
   }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    await Promise.all([fetchChats(), fetchMatches()]);
+    setLoading(false);
+  };
 
   const fetchChats = async () => {
     try {
-      setLoading(true);
-      const response = await api.get('/chats');
-      setChats(response.data);
+      const response = await api.get('/chat/conversations');
+      setChats(response.data || []);
     } catch (error) {
       Toast.show({
         type: 'error',
         text1: 'Error',
         text2: 'Could not fetch conversations',
       });
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
     }
   };
 
+  const fetchMatches = async () => {
+    try {
+      const [sentRes, receivedRes] = await Promise.all([
+        api.get('/connections/sent?status=ACCEPTED'),
+        api.get('/connections/received?status=ACCEPTED')
+      ]);
+      
+      const list = [];
+      const seenIds = new Set();
+      
+      (sentRes.data || []).forEach(item => {
+        const profile = item.receiverProfile || {};
+        const actualUserId =
+          item.receiverId ||
+          profile.userId ||
+          profile.id;
+
+        if (actualUserId && !seenIds.has(actualUserId)) {
+          seenIds.add(actualUserId);
+          list.push({
+            id: actualUserId,
+            name: profile.fullName || 'User',
+            photo:
+              profile.profilePhotoUrl ||
+              profile.profilePhoto ||
+              '',
+            conversationId: item.conversationId || '',
+          });
+        }
+      });
+      
+      (receivedRes.data || []).forEach(item => {
+        const profile = item.senderProfile || {};
+        const actualUserId =
+          item.senderId ||
+          profile.userId ||
+          profile.id;
+
+        if (actualUserId && !seenIds.has(actualUserId)) {
+          seenIds.add(actualUserId);
+          list.push({
+            id: actualUserId,
+            name: profile.fullName || 'User',
+            photo:
+              profile.profilePhotoUrl ||
+              profile.profilePhoto ||
+              '',
+            conversationId: item.conversationId || '',
+          });
+        }
+      });
+      
+      setMatches(list);
+    } catch (error) {
+      console.error('Failed to fetch accepted matches:', error);
+    }
+  };
+
+  const openConversation = (item) => {
+    const targetUserId =
+      item?.otherUserId ||
+      item?.userId ||
+      item?.receiverId ||
+      item?.senderId;
+
+    const conversationId =
+      item?.conversationId ||
+      item?.id ||
+      '';
+
+    if (!targetUserId) {
+      console.error('Cannot open chat. Missing target user ID:', item);
+      Toast.show({
+        type: 'error',
+        text1: 'Unable to open chat',
+        text2: 'User information is missing',
+      });
+      return;
+    }
+
+    const photo =
+      item?.otherProfilePhotoUrl ||
+      item?.otherProfilePhoto ||
+      item?.profilePhotoUrl ||
+      item?.profilePhoto ||
+      '';
+
+    const normalizedUrl = normalizePhotoUrl(photo) || '';
+    const otherUserName = item?.otherUserName || item?.name || 'User';
+
+    console.log('Opening chat:', {
+      targetUserId,
+      conversationId,
+      name: otherUserName,
+      route: '/chat/[id]',
+    });
+
+    router.push({
+      pathname: '/chat/[id]',
+      params: {
+        id: String(targetUserId),
+        conversationId: String(conversationId),
+        name: otherUserName,
+        photo: normalizedUrl,
+      },
+    });
+  };
+
+  const openMatchChat = (match) => {
+    if (!match?.id) {
+      console.error('Cannot open match chat. Missing user ID:', match);
+      Toast.show({
+        type: 'error',
+        text1: 'Unable to open chat',
+        text2: 'Match information is missing',
+      });
+      return;
+    }
+
+    const targetUserId = match.id;
+    const conversationId = match.conversationId || '';
+    const otherUserName = match.name || 'User';
+
+    console.log('Opening chat:', {
+      targetUserId,
+      conversationId,
+      name: otherUserName,
+      route: '/chat/[id]',
+    });
+
+    router.push({
+      pathname: '/chat/[id]',
+      params: {
+        id: String(targetUserId),
+        conversationId: String(conversationId),
+        name: otherUserName,
+        photo: normalizePhotoUrl(match.photo) || '',
+      },
+    });
+  };
+
   const renderChatItem = ({ item }) => {
-    const otherUser = item.participants.find(p => p._id !== currentUser?._id);
-    if (!otherUser) return null;
+    const photo = item.otherProfilePhotoUrl || item.otherProfilePhoto || item.profilePhoto;
+    const normalizedUrl = normalizePhotoUrl(photo);
+    const timeStr = item.lastActive ? new Date(item.lastActive).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent';
 
     return (
       <TouchableOpacity 
         style={styles.chatCard}
-        onPress={() => router.push({ pathname: '/chat/[id]', params: { id: item._id, name: otherUser.name, photo: otherUser.profilePhoto || '' } })}
+        onPress={() => openConversation(item)}
       >
         <Image 
-          source={{ uri: otherUser.profilePhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(otherUser.name)}&background=E91E63&color=fff` }} 
+          source={{ uri: getFallbackAvatar({ name: item.otherUserName, profilePhoto: photo }) }} 
           style={styles.avatar} 
+          onError={(e) => console.log('Image failed:', getFallbackAvatar({ name: item.otherUserName, profilePhoto: photo }), e.nativeEvent)}
         />
         <View style={styles.chatInfo}>
           <View style={styles.chatTop}>
-            <Text style={styles.name}>{otherUser.name}</Text>
-            <Text style={styles.time}>{item.updatedAt ? new Date(item.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</Text>
+            <Text style={styles.name}>{item.otherUserName}</Text>
+            <Text style={styles.time}>{timeStr}</Text>
           </View>
           <View style={styles.chatBottom}>
             <Text style={styles.lastMessage} numberOfLines={1}>
-              {item.lastMessage?.text || 'Start a conversation'}
+              {item.lastMessage || 'Start a conversation'}
             </Text>
           </View>
         </View>
       </TouchableOpacity>
+    );
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([fetchChats(), fetchMatches()]);
+    setRefreshing(false);
+  };
+
+  const renderHeader = () => {
+    if (matches.length === 0) return null;
+    return (
+      <View style={styles.matchesSection}>
+        <Text style={styles.sectionTitle}>New Matches</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.matchesScroll}>
+          {matches.map(match => {
+            const normalizedUrl = normalizePhotoUrl(match.photo);
+            return (
+              <TouchableOpacity
+                key={match.id}
+                style={styles.matchItem}
+                onPress={() => openMatchChat(match)}
+              >
+                <Image
+                  source={{ uri: getFallbackAvatar({ name: match.name, profilePhoto: match.photo }) }}
+                  style={styles.matchAvatar}
+                  onError={(e) => console.log('Image failed:', getFallbackAvatar({ name: match.name, profilePhoto: match.photo }), e.nativeEvent)}
+                />
+                <Text style={styles.matchName} numberOfLines={1}>
+                  {match.name.split(' ')[0]}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+        <View style={styles.headerDivider} />
+      </View>
     );
   };
 
@@ -74,11 +258,19 @@ export default function Messages() {
     <View style={styles.container}>
       <FlatList
         data={chats}
-        keyExtractor={(item) => item._id}
+        keyExtractor={(item, index) =>
+          String(
+            item?.conversationId ||
+            item?.id ||
+            item?.otherUserId ||
+            `conversation-${index}`
+          )
+        }
         renderItem={renderChatItem}
+        ListHeaderComponent={renderHeader}
         contentContainerStyle={styles.listContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchChats(); }} />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
@@ -164,5 +356,44 @@ const styles = StyleSheet.create({
   emptyText: {
     ...Typography.body,
     color: Colors.textSecondary,
+  },
+  matchesSection: {
+    paddingVertical: Spacing.s,
+    backgroundColor: Colors.white,
+  },
+  sectionTitle: {
+    ...Typography.body,
+    fontWeight: '700',
+    color: Colors.text,
+    paddingHorizontal: Spacing.m,
+    marginBottom: Spacing.s,
+  },
+  matchesScroll: {
+    paddingHorizontal: Spacing.s,
+    paddingBottom: Spacing.s,
+  },
+  matchItem: {
+    alignItems: 'center',
+    width: 75,
+    marginHorizontal: Spacing.xs,
+  },
+  matchAvatar: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: Colors.surface,
+    marginBottom: 4,
+  },
+  matchName: {
+    ...Typography.caption,
+    fontWeight: '600',
+    color: Colors.text,
+    textAlign: 'center',
+  },
+  headerDivider: {
+    height: 1,
+    backgroundColor: Colors.surface,
+    marginTop: Spacing.s,
+    marginHorizontal: Spacing.m,
   },
 });

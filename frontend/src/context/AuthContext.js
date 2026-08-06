@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import api from '../services/api';
+import api, { uploadProfilePhotoApi } from '../services/api';
+import { normalizePhotoUrl } from '../utils/imageUrl';
 
 const AuthContext = createContext({});
 
@@ -27,7 +28,14 @@ export const AuthProvider = ({ children }) => {
 
   // Helper to update user in both state and AsyncStorage
   const updateUserData = async (updatedFields) => {
-    const updated = { ...user, ...updatedFields };
+    const fieldsCopy = { ...updatedFields };
+    if (fieldsCopy.profilePhotoUrl) {
+      fieldsCopy.profilePhotoUrl = normalizePhotoUrl(fieldsCopy.profilePhotoUrl);
+    }
+    if (fieldsCopy.profilePhoto) {
+      fieldsCopy.profilePhoto = normalizePhotoUrl(fieldsCopy.profilePhoto);
+    }
+    const updated = { ...user, ...fieldsCopy };
     setUserState(updated);
     await AsyncStorage.setItem('userData', JSON.stringify(updated));
   };
@@ -39,8 +47,8 @@ export const AuthProvider = ({ children }) => {
     
     const finalUserData = {
       ...userData,
-      profilePhoto: userData.profilePhoto || userData.profilePhotoUrl,
-      profilePhotoUrl: userData.profilePhoto || userData.profilePhotoUrl,
+      profilePhoto: normalizePhotoUrl(userData.profilePhoto || userData.profilePhotoUrl),
+      profilePhotoUrl: normalizePhotoUrl(userData.profilePhoto || userData.profilePhotoUrl),
     };
     
     await AsyncStorage.setItem('userToken', token);
@@ -69,46 +77,33 @@ export const AuthProvider = ({ children }) => {
     const { accessToken, refreshToken, ...userData } = response.data;
     const token = accessToken;
 
+    // Save token immediately so subsequent API calls (like photo upload) are authenticated
+    await AsyncStorage.setItem('userToken', token);
+
     // 2. Upload photo if provided
     if (photoData) {
       try {
-        console.log("Uploading asset", {
-          uri: photoData.uri,
-          name: photoData.name || `profile-${Date.now()}.jpg`,
-          type: photoData.type || 'image/jpeg'
-        });
+        const photoResponseData = await uploadProfilePhotoApi(photoData, 0, token);
 
-        const photoFormData = new FormData();
-        photoFormData.append('file', {
-          uri: photoData.uri,
-          name: photoData.name || `profile-${Date.now()}.jpg`,
-          type: photoData.type || 'image/jpeg',
-        });
-        
-        const photoResponse = await api.post('/profiles/photo?photoIndex=0', photoFormData, {
-          timeout: 120000,
-        });
-        
-        if (photoResponse.data && photoResponse.data.profilePhotoUrl) {
-          userData.profilePhoto = photoResponse.data.profilePhotoUrl;
-          userData.profilePhotoUrl = photoResponse.data.profilePhotoUrl;
+        if (photoResponseData && photoResponseData.profilePhotoUrl) {
+          userData.profilePhoto = normalizePhotoUrl(photoResponseData.profilePhotoUrl);
+          userData.profilePhotoUrl = normalizePhotoUrl(photoResponseData.profilePhotoUrl);
         }
       } catch (photoError) {
-        console.error("Upload Error", {
+        const backendError = photoError.response?.data;
+        console.error('[AuthContext] Register photo upload error:', {
           status: photoError.response?.status,
-          data: photoError.response?.data,
-          message: photoError.message
+          backendMessage: backendError?.message || backendError,
+          message: photoError.message,
         });
       }
     }
 
     const finalUserData = {
       ...userData,
-      profilePhoto: userData.profilePhoto || userData.profilePhotoUrl,
-      profilePhotoUrl: userData.profilePhoto || userData.profilePhotoUrl,
+      profilePhoto: normalizePhotoUrl(userData.profilePhoto || userData.profilePhotoUrl),
+      profilePhotoUrl: normalizePhotoUrl(userData.profilePhoto || userData.profilePhotoUrl),
     };
-
-    await AsyncStorage.setItem('userToken', token);
     await AsyncStorage.setItem('userData', JSON.stringify(finalUserData));
     setUserState(finalUserData);
   };

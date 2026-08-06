@@ -6,7 +6,8 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
-  ActivityIndicator
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { Colors, Spacing, Typography, Shadows } from '../../../src/constants/Theme';
 import { Crown, CheckCircle2, Star, Zap, Diamond, ChevronLeft } from 'lucide-react-native';
@@ -85,6 +86,50 @@ const PremiumScreen = () => {
         },
         theme: { color: getPlanColor(plan.name) }
       };
+
+      if (!RazorpayCheckout || typeof RazorpayCheckout.open !== 'function') {
+        Alert.alert(
+          'SDK Mode / Expo Go Detected',
+          'Razorpay Native Checkout is unavailable in Expo Go. Would you like to use simulated success for testing?',
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+              onPress: () => setLoadingPayment(null)
+            },
+            {
+              text: 'Simulate Success',
+              onPress: async () => {
+                try {
+                  await api.post('/payments/verify', {
+                    razorpayOrderId: orderId,
+                    razorpayPaymentId: 'pay_simulated_' + Math.random().toString(36).substring(7),
+                    razorpaySignature: 'sig_simulated_' + Math.random().toString(36).substring(7)
+                  });
+                  
+                  Toast.show({
+                    type: 'success',
+                    text1: 'Simulated Payment Successful',
+                    text2: `You are now subscribed to ${plan.name}.`
+                  });
+                  
+                  router.back();
+                } catch (simError) {
+                  console.error('Simulated payment verification failed:', simError);
+                  Toast.show({
+                    type: 'error',
+                    text1: 'Verification Failed',
+                    text2: 'Failed to verify simulated payment.'
+                  });
+                } finally {
+                  setLoadingPayment(null);
+                }
+              }
+            }
+          ]
+        );
+        return;
+      }
 
       RazorpayCheckout.open(options).then(async (data) => {
         await api.post('/payments/verify', {

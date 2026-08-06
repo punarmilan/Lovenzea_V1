@@ -34,6 +34,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
 import api, { LOCAL_IP } from '../../../src/services/api';
+import { normalizePhotoUrl, getFallbackAvatar } from '../../../src/utils/imageUrl';
+import MapView, { Marker, Callout } from 'react-native-maps';
 
 const { width } = Dimensions.get('window');
 
@@ -63,7 +65,6 @@ export default function SearchScreen() {
 
   // Advanced Filter States
   const [maxDistance, setMaxDistance] = useState(200); // 200km radius filter
-  const [genderFilter, setGenderFilter] = useState('ALL'); // ALL, MALE, FEMALE
   const [ageFromFilter, setAgeFromFilter] = useState('');
   const [ageToFilter, setAgeToFilter] = useState('');
   const [maritalStatusFilter, setMaritalStatusFilter] = useState([]);
@@ -81,7 +82,8 @@ export default function SearchScreen() {
       const response = await api.post('/profiles/search?page=0&size=50', filterPayload);
       const rawContent = response.data.content || [];
       const formatted = rawContent.map((p, idx) => {
-        const fixedUrl = p.profilePhotoUrl ? p.profilePhotoUrl.replace('localhost', LOCAL_IP) : null;
+        const photo = p.profilePhotoUrl || p.profilePhoto;
+        const normalizedUrl = normalizePhotoUrl(photo);
         // Calculate deterministic distance under 200km radius
         const computedDist = Math.floor(((p.id || idx + 1) * 17) % 180 + 2); // 2km to 182km
         
@@ -96,6 +98,12 @@ export default function SearchScreen() {
         ];
         const mapPos = mapPositions[idx % mapPositions.length];
 
+        // Mock coordinates around Mumbai (19.0760, 72.8777)
+        const latOffset = (computedDist / 111) * (idx % 2 === 0 ? 1 : -1) * Math.random();
+        const lngOffset = (computedDist / 111) * (idx % 3 === 0 ? 1 : -1) * Math.random();
+        const lat = 19.0760 + latOffset;
+        const lng = 72.8777 + lngOffset;
+
         return {
           id: p.userId || p.id,
           profileId: p.profileId || `P${p.id}`,
@@ -103,15 +111,15 @@ export default function SearchScreen() {
           firstName: p.fullName ? p.fullName.split(' ')[0] : 'User',
           age: p.age || 25,
           city: p.city || 'Mumbai',
-          image: fixedUrl ? { uri: fixedUrl } : { uri: `https://ui-avatars.com/api/?background=E91E63&color=fff&name=${encodeURIComponent(p.fullName || 'User')}` },
+          image: { uri: getFallbackAvatar(p) },
           distance: computedDist,
           interest: p.hobbies || (idx % 2 === 0 ? 'Music' : 'Photography'),
           isNew: idx < 5,
-          mapPos: mapPos,
+          latitude: lat,
+          longitude: lng,
           maritalStatus: p.maritalStatus || 'Single',
           religion: p.religion || 'Hindu',
           educationLevel: p.educationLevel || 'Graduate',
-          gender: p.gender || 'FEMALE',
         };
       });
       setAllProfiles(formatted);
@@ -125,9 +133,6 @@ export default function SearchScreen() {
 
   const handleApplyFilters = async () => {
     const payload = {};
-    if (genderFilter !== 'ALL') {
-      payload.gender = genderFilter;
-    }
     if (ageFromFilter !== '') {
       payload.ageFrom = parseInt(ageFromFilter, 10);
     }
@@ -154,7 +159,6 @@ export default function SearchScreen() {
   };
 
   const handleClearFilters = async () => {
-    setGenderFilter('ALL');
     setAgeFromFilter('');
     setAgeToFilter('');
     setMaritalStatusFilter([]);
@@ -250,22 +254,6 @@ export default function SearchScreen() {
                 >
                   <Text style={[styles.radiusPillText, maxDistance === dist && styles.radiusPillTextActive]}>
                     {dist} km
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Gender Filter */}
-            <Text style={[styles.filterLabel, { marginTop: 14 }]}>Gender</Text>
-            <View style={styles.filterOptionRow}>
-              {['ALL', 'MALE', 'FEMALE'].map((g) => (
-                <TouchableOpacity
-                  key={g}
-                  style={[styles.filterPill, genderFilter === g && styles.filterPillActive]}
-                  onPress={() => setGenderFilter(g)}
-                >
-                  <Text style={[styles.filterPillText, genderFilter === g && styles.filterPillTextActive]}>
-                    {g.charAt(0) + g.slice(1).toLowerCase()}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -390,7 +378,11 @@ export default function SearchScreen() {
                   activeOpacity={0.85}
                   onPress={() => router.push({ pathname: '/user-details', params: { userId: item.id } })}
                 >
-                  <Image source={item.image} style={styles.cardImage} />
+                  <Image 
+                    source={item.image} 
+                    style={styles.cardImage} 
+                    onError={(e) => console.log('Image failed:', item.image?.uri, e.nativeEvent)} 
+                  />
                   
                   {/* NEW Badge */}
                   {item.isNew && (
@@ -458,68 +450,47 @@ export default function SearchScreen() {
           </Text>
 
           {/* Map Graphic Container */}
-          <View style={styles.mapCard}>
-            {/* Map Canvas Background Graphic */}
-            <Image
-              source={{ uri: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1000&auto=format&fit=crop' }}
-              style={styles.mapBackgroundImage}
-            />
-            <View style={styles.mapOverlayTint} />
-
-            {/* Map Vector Grid Lines Accent */}
-            <View style={styles.mapRoadLine1} />
-            <View style={styles.mapRoadLine2} />
-
-            {/* Render Profile Photo Markers within 200km Radius */}
-            {mapProfiles.map((p) => {
-              const isSelected = selectedMapProfile?.id === p.id;
-              return (
-                <View key={p.id} style={[styles.mapMarkerContainer, p.mapPos]}>
-                  {/* Callout Bubble above selected profile */}
-                  {isSelected && (
-                    <TouchableOpacity
-                      activeOpacity={0.9}
-                      style={styles.calloutBubble}
-                      onPress={() => router.push({ pathname: '/user-details', params: { userId: p.id } })}
-                    >
-                      <Text style={styles.calloutText}>Connect with <Text style={{ fontWeight: 'bold' }}>{p.firstName}</Text> ✨</Text>
-                      <View style={styles.calloutArrow} />
-                    </TouchableOpacity>
-                  )}
-
-                  {/* Circle Profile Photo Marker */}
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    style={[styles.markerCircleWrapper, isSelected && styles.markerCircleActive]}
-                    onPress={() => {
-                      setSelectedMapProfile(p);
-                      router.push({ pathname: '/user-details', params: { userId: p.id } });
-                    }}
+          <View style={[styles.mapCard, { overflow: 'hidden' }]}>
+            <MapView
+              style={StyleSheet.absoluteFillObject}
+              initialRegion={{
+                latitude: 19.0760,
+                longitude: 72.8777,
+                latitudeDelta: 3.5,
+                longitudeDelta: 3.5,
+              }}
+            >
+              {mapProfiles.map((p) => {
+                const isSelected = selectedMapProfile?.id === p.id;
+                return (
+                  <Marker
+                    key={p.id}
+                    coordinate={{ latitude: p.latitude, longitude: p.longitude }}
+                    onPress={() => setSelectedMapProfile(p)}
                   >
-                    <Image source={p.image} style={styles.markerAvatar} />
-                    <View style={styles.markerBadgePin}>
-                      <MapPin size={8} color="#FFF" />
+                    <View style={styles.mapMarkerContainer}>
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        style={[styles.markerCircleWrapper, isSelected && styles.markerCircleActive]}
+                        onPress={() => {
+                          setSelectedMapProfile(p);
+                          router.push({ pathname: '/user-details', params: { userId: p.id } });
+                        }}
+                      >
+                        <Image 
+                          source={p.image} 
+                          style={styles.markerAvatar} 
+                          onError={(e) => console.log('Image failed:', p.image?.uri, e.nativeEvent)} 
+                        />
+                        <View style={styles.markerBadgePin}>
+                          <MapPin size={8} color="#FFF" />
+                        </View>
+                      </TouchableOpacity>
                     </View>
-                  </TouchableOpacity>
-                </View>
-              );
-            })}
-
-            {/* Map Landmark Pins Accent */}
-            <View style={[styles.landmarkPin, { top: '75%', left: '15%' }]}>
-              <View style={styles.landmarkIconWrap}>
-                <MapPin size={14} color="#C9748A" />
-              </View>
-              <Text style={styles.landmarkLabel}>Fun Station</Text>
-            </View>
-
-            <View style={[styles.landmarkPin, { top: '55%', left: '50%' }]}>
-              <View style={[styles.landmarkIconWrap, { backgroundColor: '#C9748A' }]}>
-                <MapPin size={12} color="#FFF" />
-              </View>
-              <Text style={styles.landmarkLabel}>Central Park</Text>
-            </View>
-
+                  </Marker>
+                );
+              })}
+            </MapView>
           </View>
         </View>
         {/* ─── Search Results Section (Rendered below the map) ─── */}
@@ -545,7 +516,11 @@ export default function SearchScreen() {
                   onPress={() => router.push({ pathname: '/user-details', params: { userId: p.id } })}
                 >
                   <View style={styles.resultImageWrapper}>
-                    <Image source={p.image} style={styles.resultImage} />
+                    <Image 
+                      source={p.image} 
+                      style={styles.resultImage} 
+                      onError={(e) => console.log('Image failed:', p.image?.uri, e.nativeEvent)} 
+                    />
                     <View style={styles.resultDistanceBadge}>
                       <MapPin size={10} color="#FFF" style={{ marginRight: 2 }} />
                       <Text style={styles.resultDistanceText}>{p.distance} km</Text>

@@ -16,4 +16,8 @@ public interface ChatService {
     void markConversationAsRead(User partner, User recipient);
 
     long getUnreadCount(User user);
+
+    void deleteMessage(Long messageId, User user);
+
+    void deleteConversation(User user, Long partnerId);
 }

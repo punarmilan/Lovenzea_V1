@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { Colors, Shadows } from '../../constants/Theme';
-import { Heart, MessageSquare, Send, MoreHorizontal, UserPlus, CheckCircle2, X } from 'lucide-react-native';
+import { Heart, MessageSquare, Send, MoreHorizontal, UserPlus, CheckCircle2, X, Image as ImageIcon } from 'lucide-react-native';
 import { Image } from 'expo-image';
+import { normalizePhotoUrl, getFallbackAvatar } from '../../utils/imageUrl';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
@@ -30,32 +31,35 @@ export default function MatchFeedCard({ user, onShortlist, onSendInterest, onCha
   const images = [];
   [
     user.profilePhotoUrl,
+    user.profilePhoto,
     user.photoUrl2,
     user.photoUrl3,
     user.photoUrl4,
     user.photoUrl5,
     user.photoUrl6
   ].filter(Boolean).forEach(url => {
-    if (!images.some(img => img.uri === url)) {
-      images.push({ uri: url });
+    const normalized = normalizePhotoUrl(url);
+    if (normalized && !images.some(img => img.uri === normalized)) {
+      images.push({ uri: normalized });
     }
   });
 
   if (user.photos && user.photos.length > 0) {
     user.photos.forEach(photo => {
       const uri = typeof photo === 'string' ? photo : photo.uri;
-      if (uri && !images.some(img => img.uri === uri)) {
-        images.push({ uri });
+      const normalized = normalizePhotoUrl(uri);
+      if (normalized && !images.some(img => img.uri === normalized)) {
+        images.push({ uri: normalized });
       }
     });
   }
 
   const isMale = user.gender && user.gender.toLowerCase() === 'male';
-  const defaultPlaceholder = isMale ? require('../../../assets/images/no_photo_male.jpg') : require('../../../assets/images/no_photo.png');
+  const defaultPlaceholder = { uri: getFallbackAvatar(user) };
 
   const hasPhoto = images.length > 0;
   const mainImage = hasPhoto ? images[0] : defaultPlaceholder;
-  const avatarImage = hasPhoto ? images[0] : { uri: `https://ui-avatars.com/api/?background=E91E63&color=fff&name=${encodeURIComponent(user.fullName || 'User')}` };
+  const avatarImage = hasPhoto ? images[0] : { uri: getFallbackAvatar(user) };
   
   const smallImages = images.length > 1 ? images.slice(1, 4) : [];
   
@@ -64,7 +68,7 @@ export default function MatchFeedCard({ user, onShortlist, onSendInterest, onCha
     if (smallImages[i]) {
       displaySmall.push({ source: smallImages[i], hasPhoto: true });
     } else {
-      displaySmall.push({ source: defaultPlaceholder, hasPhoto: false });
+      displaySmall.push({ hasPhoto: false });
     }
   }
 
@@ -74,7 +78,12 @@ export default function MatchFeedCard({ user, onShortlist, onSendInterest, onCha
         {/* ─── Profile Header ─── */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Image source={avatarImage} style={styles.avatar} contentFit="cover" />
+            <Image 
+              source={avatarImage} 
+              style={styles.avatar} 
+              contentFit="cover" 
+              onError={(e) => console.log('Image failed:', avatarImage?.uri || avatarImage, e.nativeEvent)}
+            />
             <View style={styles.headerText}>
               <View style={styles.nameRow}>
                 <Text style={styles.name}>{user.fullName ? user.fullName.split(' ')[0] : 'User'}</Text>
@@ -119,7 +128,12 @@ export default function MatchFeedCard({ user, onShortlist, onSendInterest, onCha
       {/* ─── Photo Gallery ─── */}
       <View style={styles.galleryContainer}>
         <View style={styles.mainImageContainer}>
-          <Image source={mainImage} style={styles.mainImage} contentFit="cover" />
+          <Image 
+            source={mainImage} 
+            style={styles.mainImage} 
+            contentFit="cover" 
+            onError={(e) => console.log('Image failed:', mainImage?.uri || mainImage, e.nativeEvent)}
+          />
           {!hasPhoto && (
             <View style={styles.noPhotoOverlay}>
               <Text style={styles.noPhotoText}>No photo yet</Text>
@@ -132,10 +146,17 @@ export default function MatchFeedCard({ user, onShortlist, onSendInterest, onCha
         <View style={styles.smallImagesContainer}>
           {displaySmall.map((item, idx) => (
             <View key={idx} style={[styles.smallImageWrapper, idx !== 0 && { marginTop: 8 }]}>
-              <Image source={item.source} style={styles.smallImage} contentFit="cover" />
-              {!item.hasPhoto && (
-                <View style={styles.smallNoPhotoOverlay}>
-                  <Text style={styles.smallNoPhotoText} numberOfLines={2} adjustsFontSizeToFit>No photo</Text>
+              {item.hasPhoto ? (
+                <Image 
+                  source={item.source} 
+                  style={styles.smallImage} 
+                  contentFit="cover" 
+                  onError={(e) => console.log('Image failed:', item.source?.uri || item.source, e.nativeEvent)}
+                />
+              ) : (
+                <View style={styles.smallPlaceholderBox}>
+                  <ImageIcon size={18} color="#C9748A" opacity={0.6} />
+                  <Text style={styles.smallNoPhotoText} numberOfLines={2} adjustsFontSizeToFit>No more photos</Text>
                 </View>
               )}
               {item.hasPhoto && idx === 2 && images.length > 4 && (
@@ -308,18 +329,23 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginTop: 40,
   },
-  smallNoPhotoOverlay: {
+  smallPlaceholderBox: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 248, 245, 0.1)',
+    backgroundColor: '#FFF5F8',
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    paddingBottom: 6,
+    justifyContent: 'center',
+    padding: 4,
+    borderWidth: 1,
+    borderColor: '#FCE4EC',
+    borderRadius: 12,
   },
   smallNoPhotoText: {
     fontFamily: 'Inter-Medium',
-    fontSize: 8,
-    color: '#757575',
+    fontSize: 9,
+    color: '#C9748A',
     textAlign: 'center',
+    marginTop: 4,
+    fontWeight: '600',
   },
   matchBadge: {
     position: 'absolute',

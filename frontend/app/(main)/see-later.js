@@ -70,7 +70,21 @@ export default function SeeLaterScreen() {
                 onPress={(u) => router.push({ pathname: '/user-details', params: { userId: u.id } })}
                 onDismiss={(u) => removeMatch(u.id)}
                 onMenuOptions={(u) => {}}
-                onChat={(u) => router.push(`/chat/${u.id}`)}
+                onChat={(u) => {
+                  console.log('Opening chat:', {
+                    targetUserId: u.id,
+                    name: u.fullName || u.name || 'User',
+                    route: '/chat/[id]',
+                  });
+                  router.push({
+                    pathname: '/chat/[id]',
+                    params: {
+                      id: String(u.id),
+                      name: u.fullName || u.name || 'User',
+                      photo: u.profilePhotoUrl || u.profilePhoto || ''
+                    }
+                  });
+                }}
               />
               <Text style={styles.hintText}>Tap 'X' on the card to remove from this list</Text>
             </View>

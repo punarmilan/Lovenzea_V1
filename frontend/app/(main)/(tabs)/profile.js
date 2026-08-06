@@ -48,9 +48,10 @@ import {
   Globe,
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
-import api from '../../../src/services/api';
+import api, { uploadProfilePhotoApi } from '../../../src/services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
+import { normalizePhotoUrl, getFallbackAvatar } from '../../../src/utils/imageUrl';
 
 export default function Profile() {
   const { user, logout, updateUserData } = useAuth();
@@ -59,6 +60,7 @@ export default function Profile() {
   const insets = useSafeAreaInsets();
   
   const [profileData, setProfileData] = useState(null);
+  const [subDetails, setSubDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({});
@@ -119,10 +121,18 @@ export default function Profile() {
     try {
       setLoading(true);
       const timestamp = new Date().getTime();
-      const response = await api.get(`/profiles/me?t=${timestamp}`);
-      setProfileData(response.data);
-      if (response.data.profilePhotoUrl) {
-        updateUserData({ ...user, name: response.data.fullName, profilePhotoUrl: response.data.profilePhotoUrl });
+      const [profileRes, subRes] = await Promise.all([
+        api.get(`/profiles/me?t=${timestamp}`),
+        api.get('/subscriptions/details').catch(() => null)
+      ]);
+      
+      setProfileData(profileRes.data);
+      if (subRes && subRes.data) {
+        setSubDetails(subRes.data);
+      }
+      
+      if (profileRes.data.profilePhotoUrl) {
+        updateUserData({ ...user, name: profileRes.data.fullName, profilePhotoUrl: profileRes.data.profilePhotoUrl });
       }
       
       try {
@@ -315,9 +325,8 @@ export default function Profile() {
       
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
+        allowsEditing: false,
+        quality: 0.3,
       });
 
       if (!result.canceled) {
@@ -337,38 +346,47 @@ export default function Profile() {
     handlePickPhoto(currentPhotoCount);
   };
 
-  const uploadProfilePhoto = async (asset, index) => {
+  const uploadProfilePhoto = async (asset, index = 0) => {
     try {
       setUploadingPhoto(true);
-      console.log("Uploading asset", {
-        uri: asset.uri,
-        name: asset.fileName || asset.name || `photo-${index}-${Date.now()}.jpg`,
-        type: asset.mimeType || asset.type || 'image/jpeg'
-      });
 
-      const formData = new FormData();
-      formData.append('file', {
-        uri: asset.uri,
-        name: asset.fileName || asset.name || `photo-${index}-${Date.now()}.jpg`,
-        type: asset.mimeType || asset.type || 'image/jpeg',
-      });
+      const responseData = await uploadProfilePhotoApi(asset, index);
 
-      const res = await api.post(`/profiles/photo?photoIndex=${index}`, formData, {
-        timeout: 120000,
-      });
+      setProfileData(responseData);
 
-      setProfileData(res.data);
-      if (index === 0 && res.data.profilePhotoUrl) {
-        updateUserData({ ...user, profilePhotoUrl: res.data.profilePhotoUrl });
+      if (index === 0 && responseData?.profilePhotoUrl) {
+        await updateUserData({
+          ...user,
+          profilePhotoUrl: responseData.profilePhotoUrl,
+        });
       }
-      Toast.show({ type: 'success', text1: 'Success', text2: 'Photo uploaded successfully' });
-    } catch (error) {
-      console.error("Upload Error", {
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message
+
+      await fetchProfile();
+
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'Photo uploaded successfully',
       });
-      Toast.show({ type: 'error', text1: 'Upload Failed', text2: 'Could not upload photo' });
+    } catch (error) {
+      const backendError = error.response?.data;
+      console.error('[Profile] Upload Error:', {
+        status: error.response?.status,
+        backendMessage: backendError?.message || backendError,
+        message: error.message,
+      });
+
+      const displayMessage =
+        backendError?.message ||
+        (typeof backendError === 'string' ? backendError : null) ||
+        error.message ||
+        'Could not upload photo';
+
+      Toast.show({
+        type: 'error',
+        text1: 'Upload Failed',
+        text2: displayMessage,
+      });
     } finally {
       setUploadingPhoto(false);
     }
@@ -423,7 +441,7 @@ export default function Profile() {
       <ScrollView 
         style={styles.container} 
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: isEditing ? 150 : 80 }}
+        contentContainerStyle={{ paddingBottom: isEditing ? 80 : 30 }}
       >
       
       {/* ─── Top Bar Header & Profile Card ─── */}
@@ -452,6 +470,13 @@ export default function Profile() {
         </View>
 
         <View style={styles.profileCard}>
+          <TouchableOpacity 
+            style={styles.profileCardEditBtn} 
+            onPress={handleToggleEdit}
+          >
+            {isEditing ? <X size={16} color="#FFF" /> : <Edit2 size={16} color="#FFF" />}
+          </TouchableOpacity>
+
           <View style={styles.headerRow}>
             <View style={styles.avatarWrapper}>
               <TouchableOpacity 
@@ -459,9 +484,16 @@ export default function Profile() {
                 activeOpacity={0.8}
               >
                 <Image
-                  source={profileData?.profilePhotoUrl ? { uri: profileData.profilePhotoUrl } : require('../../../assets/images/female_avatar.png')}
-                  style={styles.headerAvatarSquircle}
-                />
+                    source={{ uri: getFallbackAvatar(profileData || user) }}
+                    style={styles.headerAvatarSquircle}
+                    resizeMode="cover"
+                    onLoad={() => {
+                      console.log('Profile image loaded');
+                    }}
+                    onError={(event) => {
+                      console.log('Image failed:', getFallbackAvatar(profileData || user), event.nativeEvent);
+                    }}
+                  />
               </TouchableOpacity>
             </View>
             
@@ -486,9 +518,17 @@ export default function Profile() {
                 <Text style={styles.profileLocation}>{profileData?.city || 'Mumbai'}, India</Text>
               </View>
 
-              <TouchableOpacity style={styles.upgradePillBtn}>
-                <Text style={styles.upgradePillText}>Upgrade Plan</Text>
-              </TouchableOpacity>
+              {profileData?.isPremium || subDetails?.active ? (
+                <TouchableOpacity style={[styles.upgradePillBtn, { backgroundColor: '#4CAF50', borderColor: '#4CAF50' }]} disabled>
+                  <Text style={styles.upgradePillText}>
+                    {subDetails?.planName ? `${subDetails.planName} Plan` : 'Premium Plan'}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity style={styles.upgradePillBtn} onPress={() => router.push('/premium')}>
+                  <Text style={styles.upgradePillText}>Upgrade Plan</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </View>
@@ -523,12 +563,7 @@ export default function Profile() {
           </View>
         </View>
 
-        <TouchableOpacity 
-          style={styles.floatingEditBtn} 
-          onPress={handleToggleEdit}
-        >
-          {isEditing ? <X size={16} color="#FFF" /> : <Edit2 size={16} color="#FFF" />}
-        </TouchableOpacity>
+
 
         {/* Bio Card (Always on Top) */}
         <View style={styles.sectionCard}>
@@ -554,7 +589,14 @@ export default function Profile() {
             {albumPhotos.map((url, index) => (
               <View key={index} style={styles.photoContainer}>
                 <TouchableOpacity onPress={() => handlePickPhoto(index)} style={{ flex: 1, width: '100%', height: '100%' }}>
-                  <Image source={{ uri: url }} style={styles.albumPhoto} />
+                  <Image
+                    source={{ uri: normalizePhotoUrl(url) }}
+                    style={styles.albumPhoto}
+                    resizeMode="cover"
+                    onError={(event) => {
+                      console.log('Image failed:', normalizePhotoUrl(url), event.nativeEvent);
+                    }}
+                  />
                 </TouchableOpacity>
                 {isEditing && (
                   <TouchableOpacity style={styles.photoDeleteBadge} onPress={() => handleDeletePhoto(url)}>
@@ -1189,6 +1231,24 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     marginHorizontal: 20,
     padding: 20,
+    position: 'relative',
+  },
+  profileCardEditBtn: {
+    position: 'absolute',
+    right: 10,
+    top: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#C9748A',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#C9748A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 10,
   },
   headerRow: {
     flexDirection: 'row',
@@ -1626,9 +1686,11 @@ const styles = StyleSheet.create({
   standaloneStatsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: -20,
+    marginTop: -45,
     marginBottom: 24,
     gap: 12,
+    position: 'relative',
+    zIndex: 20,
   },
   standaloneStatCard: {
     flex: 1,

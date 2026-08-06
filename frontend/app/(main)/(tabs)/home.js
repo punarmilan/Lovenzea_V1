@@ -31,6 +31,7 @@ import { DrawerActions } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
 import { useAuth } from '../../../src/context/AuthContext';
 import api, { LOCAL_IP } from '../../../src/services/api';
+import { normalizePhotoUrl, getFallbackAvatar } from '../../../src/utils/imageUrl';
 
 const { width } = Dimensions.get('window');
 
@@ -84,7 +85,7 @@ const EmptyState = ({ title, message, image }) => (
   </View>
 );
 
-const MatchCard = ({ item, index, scrollX, onPress, onSendInterest, isInterestSent }) => {
+const MatchCard = ({ item, index, scrollX, onPress, onSendInterest, isInterestSent, onChat, onShortlist, isShortlisted }) => {
   const inputRange = [
     (index - 1) * ITEM_SIZE,
     index * ITEM_SIZE,
@@ -108,7 +109,12 @@ const MatchCard = ({ item, index, scrollX, onPress, onSendInterest, isInterestSe
       >
         <Animated.View style={[styles.matchCard, animatedStyle]}>
           {/* Full-bleed photo */}
-          <Image source={imageSource} style={styles.matchImage} resizeMode="cover" />
+          <Image 
+            source={imageSource} 
+            style={styles.matchImage} 
+            resizeMode="cover" 
+            onError={(e) => console.log('Image failed:', imageSource?.uri || imageSource, e.nativeEvent)}
+          />
 
           {/* Match % badge — top left */}
           <View style={styles.matchBadge}>
@@ -134,18 +140,16 @@ const MatchCard = ({ item, index, scrollX, onPress, onSendInterest, isInterestSe
 
             {/* Action buttons row — each button stops propagation to parent */}
             <View style={styles.matchActionRow}>
-
-
               {/* Shortlist */}
               <TouchableOpacity
-                style={styles.matchActionBtn}
-                onPress={(e) => { e.stopPropagation?.(); }}
+                style={styles.matchCircleActionBtn}
+                onPress={(e) => { e.stopPropagation?.(); onShortlist && onShortlist(item); }}
+                activeOpacity={0.8}
               >
-                <Heart size={18} color="#C9748A" strokeWidth={2.5} />
-                <Text style={[styles.matchActionLabel, { color: '#C9748A' }]}>Shortlist</Text>
+                <Heart size={18} color="#C9748A" fill={isShortlisted ? '#C9748A' : 'none'} strokeWidth={2.2} />
               </TouchableOpacity>
 
-              {/* Send Interest — primary */}
+              {/* Send Interest — primary sleeker pill */}
               <TouchableOpacity
                 style={[styles.matchSendBtn, isInterestSent && styles.matchSendBtnSent]}
                 onPress={(e) => { e.stopPropagation?.(); onSendInterest && onSendInterest(item); }}
@@ -164,11 +168,11 @@ const MatchCard = ({ item, index, scrollX, onPress, onSendInterest, isInterestSe
 
               {/* Chat */}
               <TouchableOpacity
-                style={styles.matchActionBtn}
-                onPress={(e) => { e.stopPropagation?.(); onPress && onPress(); }}
+                style={styles.matchCircleActionBtn}
+                onPress={(e) => { e.stopPropagation?.(); onChat && onChat(item); }}
+                activeOpacity={0.8}
               >
-                <MessageCircle size={18} color="#D4AF37" strokeWidth={2.5} />
-                <Text style={[styles.matchActionLabel, { color: '#D4AF37' }]}>Chat</Text>
+                <MessageCircle size={18} color="#D4AF37" strokeWidth={2.2} />
               </TouchableOpacity>
             </View>
           </View>
@@ -188,6 +192,18 @@ export default function DiscoveryDashboard() {
   const [realConnections, setRealConnections] = useState([]);
   const [sentInterests, setSentInterests] = useState([]);
   const [chats, setChats] = useState([]);
+  const [shortlistedIds, setShortlistedIds] = useState(new Set());
+  const [dashboardStats, setDashboardStats] = useState({
+    profileViews: 0,
+    newMatches: 0,
+    likesReceived: 0,
+    activeChats: 0,
+    interestsSent: 0,
+    profileViewsWeekly: [0, 0, 0, 0],
+    matchesWeekly: [0, 0, 0, 0],
+    messagesWeekly: [0, 0, 0, 0],
+    hobbies: [],
+  });
 
   const { completionPercentage, personalInfoDone, picturesAdded, interestsDone } = useMemo(() => {
     let score = 20; // Base score for account creation
@@ -212,6 +228,8 @@ export default function DiscoveryDashboard() {
     fetchRealMatches();
     fetchSentInterests();
     fetchRecentChats();
+    fetchDashboardStats();
+    fetchShortlistedIds();
   }, []);
 
   const fetchPremiumProfiles = async () => {
@@ -223,12 +241,11 @@ export default function DiscoveryDashboard() {
         content = response.data.content || [];
       }
       const formatted = content.map((p) => {
-        const fixedUrl = p.profilePhotoUrl ? p.profilePhotoUrl.replace('localhost', LOCAL_IP) : null;
         return {
           id: p.userId || p.id,
           name: p.fullName ? p.fullName.split(' ')[0] : 'User',
           fullName: p.fullName || 'User',
-          image: fixedUrl ? { uri: fixedUrl } : { uri: 'https://ui-avatars.com/api/?background=E91E63&color=fff&name=' + encodeURIComponent(p.fullName || 'User') },
+          image: { uri: getFallbackAvatar(p) },
           isPremium: p.isPremium,
         };
       });
@@ -242,7 +259,6 @@ export default function DiscoveryDashboard() {
     try {
       const response = await api.post('/profiles/search?page=0&size=6', {});
       const formatted = (response.data.content || []).map((p, idx) => {
-        const fixedUrl = p.profilePhotoUrl ? p.profilePhotoUrl.replace('localhost', LOCAL_IP) : null;
         return {
           id: p.userId,
           name: p.fullName || 'User',
@@ -251,7 +267,7 @@ export default function DiscoveryDashboard() {
           education: p.educationLevel || 'Graduate',
           height: p.height || "5'5\"",
           match: 85 + (idx * 3) % 14,
-          image: fixedUrl || 'https://ui-avatars.com/api/?background=E91E63&color=fff&name=' + encodeURIComponent(p.fullName || 'User'),
+          image: getFallbackAvatar(p),
         };
       });
       setRealMatches(formatted);
@@ -277,12 +293,21 @@ export default function DiscoveryDashboard() {
       try {
         response = await api.get('/connections/sent');
       } catch (e) {
-        response = await api.get('/connection-requests/sent');
+        response = await api.get('/connections/sent');
       }
       const list = response.data || [];
+      
+      const ids = new Set();
+      list.forEach(item => {
+        if (item.receiverId) ids.add(item.receiverId);
+        if (item.receiverProfile && item.receiverProfile.userId) ids.add(item.receiverProfile.userId);
+      });
+      setSentInterestIds(ids);
+
       const formatted = list.map((item) => {
         const profile = item.receiverProfile || {};
-        const fixedUrl = profile.profilePhotoUrl ? profile.profilePhotoUrl.replace('localhost', LOCAL_IP) : null;
+        const photo = profile.profilePhotoUrl || profile.profilePhoto;
+        const normalizedUrl = normalizePhotoUrl(photo);
         let timeAgo = 'Recent';
         if (item.createdAt) {
           const diffHours = Math.floor((new Date() - new Date(item.createdAt)) / (1000 * 60 * 60));
@@ -303,7 +328,7 @@ export default function DiscoveryDashboard() {
           age: profile.age || 25,
           status: displayStatus,
           time: timeAgo,
-          image: fixedUrl ? { uri: fixedUrl } : require('../../../assets/images/female_avatar.png'),
+          image: { uri: getFallbackAvatar(profile) },
         };
       });
       setSentInterests(formatted);
@@ -317,7 +342,8 @@ export default function DiscoveryDashboard() {
       const response = await api.get('/chat/conversations');
       const list = response.data || [];
       const formatted = list.map((c) => {
-        const fixedUrl = c.otherProfilePhotoUrl ? c.otherProfilePhotoUrl.replace('localhost', LOCAL_IP) : null;
+        const photo = c.otherProfilePhotoUrl || c.otherProfilePhoto || c.profilePhoto;
+        const normalizedUrl = normalizePhotoUrl(photo);
         let timeStr = 'Recent';
         if (c.lastActive) {
           const date = new Date(c.lastActive);
@@ -329,7 +355,7 @@ export default function DiscoveryDashboard() {
           message: c.lastMessage || 'Start conversation',
           time: timeStr,
           unread: c.unreadCount || 0,
-          image: fixedUrl ? { uri: fixedUrl } : require('../../../assets/images/female_avatar.png'),
+          image: { uri: getFallbackAvatar({ name: c.otherUserName, profilePhoto: photo }) },
         };
       });
       setChats(formatted);
@@ -338,12 +364,60 @@ export default function DiscoveryDashboard() {
     }
   };
 
+  const fetchDashboardStats = async () => {
+    try {
+      const [profileRes, sentRes, receivedRes, chatsRes] = await Promise.all([
+        api.get('/profiles/me').catch(() => null),
+        api.get('/connections/sent').catch(() => null),
+        api.get('/connections/received').catch(() => null),
+        api.get('/chat/conversations').catch(() => null),
+      ]);
+
+      const profile = profileRes?.data || {};
+      const sentList = sentRes?.data || [];
+      const receivedList = receivedRes?.data || [];
+      const chatList = chatsRes?.data || [];
+
+      const newMatches = [...sentList, ...receivedList].filter(
+        (c) => c.status?.toUpperCase() === 'ACCEPTED'
+      ).length;
+      const likesReceived = receivedList.length;
+      const interestsSent = sentList.length;
+      const activeChats = chatList.length;
+      const profileViews = profile.viewsCount || profile.profileViews || 0;
+      const rawHobbies = profile.hobbies
+        ? profile.hobbies.split(',').map((h) => h.trim()).filter(Boolean)
+        : [];
+
+      // Build simple weekly chart data from totals (distributed across 4 days for visualization)
+      const spread = (total) => {
+        const base = Math.floor(total / 4);
+        const rem = total % 4;
+        return [base, base + Math.min(rem, 1), base + Math.min(rem, 2), base + (rem > 0 ? 1 : 0)];
+      };
+
+      setDashboardStats({
+        profileViews,
+        newMatches,
+        likesReceived,
+        activeChats,
+        interestsSent,
+        profileViewsWeekly: spread(profileViews),
+        matchesWeekly: spread(newMatches),
+        messagesWeekly: spread(activeChats * 3),
+        hobbies: rawHobbies.slice(0, 6),
+      });
+    } catch (err) {
+      console.error('Failed to fetch dashboard stats:', err);
+    }
+  };
+
   const handleSendInterest = async (matchUser) => {
     try {
       try {
         await api.post(`/connections/send/${matchUser.id}`);
       } catch (e) {
-        await api.post(`/connection-requests/send/${matchUser.id}`);
+        await api.post(`/connections/send/${matchUser.id}`);
       }
       setSentInterestIds((prev) => new Set(prev).add(matchUser.id));
       Toast.show({
@@ -359,6 +433,35 @@ export default function DiscoveryDashboard() {
         text1: 'Error',
         text2: 'Failed to send interest. Please try again.',
       });
+    }
+  };
+
+  const fetchShortlistedIds = async () => {
+    try {
+      const res = await api.get('/shortlist/my');
+      const ids = (res.data || []).map((p) => p.userId || p.id).filter(Boolean);
+      setShortlistedIds(new Set(ids));
+    } catch (err) {
+      console.error('Failed to load shortlist:', err);
+    }
+  };
+
+  const handleShortlist = async (matchItem) => {
+    const id = matchItem.id;
+    const alreadyShortlisted = shortlistedIds.has(id);
+    try {
+      if (alreadyShortlisted) {
+        await api.delete(`/shortlist/${id}`);
+        setShortlistedIds((prev) => { const s = new Set(prev); s.delete(id); return s; });
+        Toast.show({ type: 'info', text1: 'Removed', text2: `${matchItem.name} removed from shortlist.` });
+      } else {
+        await api.post(`/shortlist/${id}`);
+        setShortlistedIds((prev) => new Set(prev).add(id));
+        Toast.show({ type: 'success', text1: 'Shortlisted!', text2: `${matchItem.name} added to your shortlist.` });
+      }
+    } catch (err) {
+      console.error('Shortlist error:', err);
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Could not update shortlist.' });
     }
   };
 
@@ -400,8 +503,9 @@ export default function DiscoveryDashboard() {
                 <View style={styles.badge}><Text style={styles.badgeText}>3</Text></View>
               </View>
               <Image 
-                source={user?.profilePhotoUrl ? { uri: user.profilePhotoUrl } : require('../../../assets/images/female_avatar.png')} 
+                source={{ uri: getFallbackAvatar(user) }} 
                 style={styles.headerAvatar} 
+                onError={(e) => console.log('Image failed:', getFallbackAvatar(user), e.nativeEvent)}
               />
               <TouchableOpacity onPress={() => navigation.dispatch(DrawerActions.toggleDrawer())} style={{ marginLeft: 6 }}>
                 <MoreHorizontal size={26} color="#FFF" />
@@ -514,19 +618,38 @@ export default function DiscoveryDashboard() {
             <SectionHeader icon={Sparkles} label="Premium Profiles" iconBg="#D4AF37" />
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.connectionsScroll}>
-            {realConnections.length > 0 ? realConnections.map(user => (
-              <TouchableOpacity key={user.id} style={styles.connectionItem} onPress={() => navigation.navigate('matches')}>
-                <View style={styles.connectionAvatarWrapper}>
-                  <Image source={user.image} style={styles.connectionAvatar} />
-                  {user.isPremium && (
-                    <View style={styles.proBadge}>
-                      <Text style={styles.proBadgeText}>PRO</Text>
+            {realConnections.length > 0 ? (
+              <>
+                {realConnections.map(user => (
+                  <TouchableOpacity key={user.id} style={styles.connectionItem} onPress={() => router.push({ pathname: '/user-details', params: { userId: user.id } })}>
+                    <View style={styles.connectionAvatarWrapper}>
+                      <Image 
+                        source={user.image} 
+                        style={styles.connectionAvatar} 
+                        onError={(e) => console.log('Image failed:', user.image?.uri, e.nativeEvent)}
+                      />
+                      {user.isPremium && (
+                        <View style={styles.proBadge}>
+                          <Text style={styles.proBadgeText}>PRO</Text>
+                        </View>
+                      )}
                     </View>
-                  )}
-                </View>
-                <Text style={styles.connectionName} numberOfLines={1}>{user.name}</Text>
-              </TouchableOpacity>
-            )) : (
+                    <Text style={styles.connectionName} numberOfLines={1}>{user.name}</Text>
+                  </TouchableOpacity>
+                ))}
+                
+                {/* See All card at the end */}
+                <TouchableOpacity 
+                  style={[styles.connectionItem, { justifyContent: 'center' }]} 
+                  onPress={() => navigation.navigate('matches')}
+                >
+                  <View style={[styles.connectionAvatar, { backgroundColor: '#FCE8E6', justifyContent: 'center', alignItems: 'center', borderRadius: 28 }]}>
+                    <Sparkles size={24} color="#D4AF37" />
+                  </View>
+                  <Text style={[styles.connectionName, { fontWeight: '700', color: '#D4AF37' }]} numberOfLines={1}>See All</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
               <EmptyState message="No profiles found" />
             )}
           </ScrollView>
@@ -534,7 +657,7 @@ export default function DiscoveryDashboard() {
           {/* ─── Potential Matches Carousel ─── */}
           <View style={[styles.matchesHeader, { marginBottom: 4 }]}>
             <SectionHeader icon={Heart} label="Potential Matches" iconBg="#e096aaff" />
-            <TouchableOpacity><Text style={styles.swipeAllText}>Swipe All</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate('matches')}><Text style={styles.swipeAllText}>Swipe All</Text></TouchableOpacity>
           </View>
           
           <Animated.ScrollView
@@ -555,6 +678,23 @@ export default function DiscoveryDashboard() {
                 onPress={() => router.push({ pathname: '/user-details', params: { userId: item.id } })}
                 onSendInterest={handleSendInterest}
                 isInterestSent={sentInterestIds.has(item.id)}
+                onShortlist={handleShortlist}
+                isShortlisted={shortlistedIds.has(item.id)}
+                onChat={(chatItem) => {
+                  console.log('Opening chat from dashboard potential matches:', {
+                    targetUserId: chatItem.id,
+                    name: chatItem.name,
+                    route: '/chat/[id]',
+                  });
+                  router.push({
+                    pathname: '/chat/[id]',
+                    params: {
+                      id: String(chatItem.id),
+                      name: chatItem.name,
+                      photo: chatItem.image || ''
+                    }
+                  });
+                }}
               />
             )) : (
               <View style={{ width: width, alignItems: 'center' }}>
@@ -590,7 +730,11 @@ export default function DiscoveryDashboard() {
                     style={styles.sentInterestHorizontalCard}
                     onPress={() => item.userId && router.push({ pathname: '/user-details', params: { userId: item.userId } })}
                   >
-                    <Image source={item.image} style={styles.sentHorizontalAvatar} />
+                    <Image 
+                      source={item.image} 
+                      style={styles.sentHorizontalAvatar} 
+                      onError={(e) => console.log('Image failed:', item.image?.uri, e.nativeEvent)}
+                    />
                     <View style={styles.sentHorizontalInfo}>
                       <Text style={styles.sentHorizontalName} numberOfLines={1}>{item.name}, {item.age}</Text>
                       <Text style={styles.sentHorizontalTime}>{item.time}</Text>
@@ -626,9 +770,27 @@ export default function DiscoveryDashboard() {
                     key={chat.id} 
                     activeOpacity={0.7} 
                     style={[styles.chatListItem, index !== chats.length - 1 && styles.chatDivider]}
-                    onPress={() => router.push({ pathname: '/chat', params: { userId: chat.id, name: chat.name } })}
+                    onPress={() => {
+                      console.log('Opening chat:', {
+                        targetUserId: chat.id,
+                        name: chat.name,
+                        route: '/chat/[id]',
+                      });
+                      router.push({
+                        pathname: '/chat/[id]',
+                        params: {
+                          id: String(chat.id),
+                          name: chat.name,
+                          photo: chat.image?.uri || ''
+                        }
+                      });
+                    }}
                   >
-                    <Image source={chat.image} style={styles.chatAvatar} />
+                    <Image 
+                      source={chat.image} 
+                      style={styles.chatAvatar} 
+                      onError={(e) => console.log('Image failed:', chat.image?.uri, e.nativeEvent)}
+                    />
                     <View style={styles.chatInfo}>
                       <Text style={styles.chatName}>{chat.name}</Text>
                       <Text style={[styles.chatMessage, chat.unread > 0 && styles.chatMessageUnread]} numberOfLines={1}>{chat.message}</Text>
@@ -661,8 +823,8 @@ export default function DiscoveryDashboard() {
             <Text style={styles.chartSubtitle}>Weekly Activity</Text>
             
             <View style={styles.legendRow}>
-              <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#2D1B22' }]} /><Text style={styles.legendText}>New Matches</Text></View>
-              <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#C9748A' }]} /><Text style={styles.legendText}>Likes</Text></View>
+              <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#2D1B22' }]} /><Text style={styles.legendText}>Matches</Text></View>
+              <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#C9748A' }]} /><Text style={styles.legendText}>Interests</Text></View>
               <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#D4AF37' }]} /><Text style={styles.legendText}>Messages</Text></View>
             </View>
 
@@ -670,9 +832,9 @@ export default function DiscoveryDashboard() {
               data={{
                 labels: ["Mon", "Tue", "Wed", "Thu"],
                 datasets: [
-                  { data: [5, 12, 10, 16, 12, 25], color: () => '#2D1B22', strokeWidth: 2 },
-                  { data: [0, 8, 4, 12, 20, 10], color: () => '#C9748A', strokeWidth: 2 },
-                  { data: [0, 4, 2, 8, 14, 6], color: () => '#D4AF37', strokeWidth: 2 }
+                  { data: dashboardStats.matchesWeekly.map(v => Math.max(v, 0.1)), color: () => '#2D1B22', strokeWidth: 2 },
+                  { data: dashboardStats.profileViewsWeekly.map(v => Math.max(v, 0.1)), color: () => '#C9748A', strokeWidth: 2 },
+                  { data: dashboardStats.messagesWeekly.map(v => Math.max(v, 0.1)), color: () => '#D4AF37', strokeWidth: 2 },
                 ]
               }}
               width={width - 60}
@@ -694,17 +856,17 @@ export default function DiscoveryDashboard() {
 
             <View style={styles.statsRow}>
               <View style={styles.statBox}>
-                <Text style={styles.statValue}>28</Text>
+                <Text style={styles.statValue}>{dashboardStats.newMatches}</Text>
                 <Text style={styles.statLabel}>New Matches</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statBox}>
-                <Text style={styles.statValue}>14</Text>
-                <Text style={styles.statLabel}>Likes Received</Text>
+                <Text style={styles.statValue}>{dashboardStats.likesReceived}</Text>
+                <Text style={styles.statLabel}>Interests In</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statBox}>
-                <Text style={styles.statValue}>9</Text>
+                <Text style={styles.statValue}>{dashboardStats.activeChats}</Text>
                 <Text style={styles.statLabel}>Chats Active</Text>
               </View>
             </View>
@@ -719,7 +881,11 @@ export default function DiscoveryDashboard() {
               <Text style={styles.chartSubtitleCentered}>Profile Views</Text>
               <View style={styles.donutContainer}>
                 <ProgressChart
-                  data={[0.8, 0.4, 0.2]} // Fake data for multiple rings
+                  data={[
+                    Math.min((dashboardStats.profileViews || 0) / Math.max(dashboardStats.profileViews * 1.25 || 100, 1), 1),
+                    Math.min((dashboardStats.newMatches || 0) / Math.max(dashboardStats.newMatches * 1.5 || 10, 1), 1),
+                    Math.min((dashboardStats.interestsSent || 0) / Math.max(dashboardStats.interestsSent * 1.5 || 10, 1), 1),
+                  ]}
                   width={120}
                   height={120}
                   strokeWidth={12}
@@ -735,8 +901,8 @@ export default function DiscoveryDashboard() {
                   hideLegend={true}
                 />
                 <View style={styles.donutCenter}>
-                  <Text style={styles.donutValue}>530</Text>
-                  <Text style={styles.donutLabel}>Views this week</Text>
+                  <Text style={styles.donutValue}>{dashboardStats.profileViews}</Text>
+                  <Text style={styles.donutLabel}>Profile views</Text>
                 </View>
               </View>
             </View>
@@ -744,10 +910,17 @@ export default function DiscoveryDashboard() {
             <View style={styles.highlightCol}>
               <Text style={styles.chartSubtitleCentered}>Interests Overview</Text>
               <View style={styles.interestTags}>
-                <View style={styles.intTag}><Text style={styles.intTagText}>Travel</Text></View>
-                <View style={styles.intTag}><Text style={styles.intTagText}>Reading</Text></View>
-                <View style={styles.intTag}><Text style={styles.intTagText}>Coffee</Text></View>
-                <View style={styles.intTag}><Text style={styles.intTagText}>Music</Text></View>
+                {dashboardStats.hobbies.length > 0 ? (
+                  dashboardStats.hobbies.map((hobby, i) => (
+                    <View key={i} style={styles.intTag}><Text style={styles.intTagText}>{hobby}</Text></View>
+                  ))
+                ) : (
+                  <>
+                    <View style={styles.intTag}><Text style={styles.intTagText}>Matches: {dashboardStats.newMatches}</Text></View>
+                    <View style={styles.intTag}><Text style={styles.intTagText}>Interests: {dashboardStats.interestsSent}</Text></View>
+                    <View style={styles.intTag}><Text style={styles.intTagText}>Chats: {dashboardStats.activeChats}</Text></View>
+                  </>
+                )}
               </View>
             </View>
           </View>
@@ -936,42 +1109,53 @@ const styles = StyleSheet.create({
   matchActionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 12,
-    gap: 4,
+    justifyContent: 'space-between',
+    marginTop: 14,
+    gap: 12,
   },
-  matchActionBtn: {
-    flex: 1,
-    alignItems: 'center',
+  matchCircleActionBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    borderRadius: 12,
-    paddingVertical: 7,
-    gap: 3,
-  },
-  matchActionLabel: {
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.2,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   matchSendBtn: {
-    flex: 1.8,
-    borderRadius: 12,
+    flex: 1,
+    height: 40,
+    borderRadius: 20,
     overflow: 'hidden',
+    shadowColor: '#C9748A',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
   },
   matchSendBtnSent: {
-    opacity: 0.85,
+    opacity: 0.9,
+    shadowColor: '#4CAF50',
   },
   matchSendGradient: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 9,
-    gap: 5,
+    height: '100%',
+    gap: 6,
   },
   matchSendText: {
     color: '#FFF',
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
+    letterSpacing: 0.3,
   },
   viewProfileBtn: { borderRadius: 12, overflow: 'hidden' },
   viewProfileGradient: { paddingVertical: 12, alignItems: 'center' },

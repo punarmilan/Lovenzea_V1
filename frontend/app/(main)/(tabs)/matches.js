@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../../../src/constants/Theme';
 import { ChevronLeft, Plus, Bookmark, MoreHorizontal } from 'lucide-react-native';
 import api, { LOCAL_IP } from '../../../src/services/api';
+import { normalizePhotoUrl, getFallbackAvatar } from '../../../src/utils/imageUrl';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
 import { useRouter, useNavigation } from 'expo-router';
@@ -42,7 +43,7 @@ export default function Matches() {
   }, []);
 
   const fixUrl = (url) => {
-    return url ? url.replace('localhost', LOCAL_IP) : null;
+    return normalizePhotoUrl(url);
   };
 
   const fetchData = async () => {
@@ -51,17 +52,34 @@ export default function Matches() {
       // Fetch matches
       const response = await api.post('/profiles/search?page=0&size=20', {});
       
-      const formattedProfiles = (response.data.content || []).map(p => ({
-        ...p,
-        id: p.userId || p.id,
-        profilePhotoUrl: fixUrl(p.profilePhotoUrl),
-        photoUrl2: fixUrl(p.photoUrl2),
-        photoUrl3: fixUrl(p.photoUrl3),
-        photoUrl4: fixUrl(p.photoUrl4),
-        photoUrl5: fixUrl(p.photoUrl5),
-        photoUrl6: fixUrl(p.photoUrl6),
-        photos: p.photos ? p.photos.map(photo => ({ uri: fixUrl(photo) })) : [],
-      }));
+      // Fetch sent interests to mark cards
+      let sentIds = new Set();
+      try {
+        const sentRes = await api.get('/connections/sent');
+        const sentList = sentRes.data || [];
+        sentList.forEach(item => {
+          if (item.receiverId) sentIds.add(item.receiverId.toString());
+          if (item.receiverProfile && item.receiverProfile.userId) sentIds.add(item.receiverProfile.userId.toString());
+        });
+      } catch (err) {
+        console.error('Failed to load sent interests for discover feed:', err);
+      }
+
+      const formattedProfiles = (response.data.content || []).map(p => {
+        const userId = p.userId || p.id;
+        return {
+          ...p,
+          id: userId,
+          interestSent: sentIds.has(userId.toString()),
+          profilePhotoUrl: fixUrl(p.profilePhotoUrl),
+          photoUrl2: fixUrl(p.photoUrl2),
+          photoUrl3: fixUrl(p.photoUrl3),
+          photoUrl4: fixUrl(p.photoUrl4),
+          photoUrl5: fixUrl(p.photoUrl5),
+          photoUrl6: fixUrl(p.photoUrl6),
+          photos: p.photos ? p.photos.map(photo => ({ uri: fixUrl(photo) })) : [],
+        };
+      });
 
       setProfiles(formattedProfiles);
     } catch (error) {
@@ -120,7 +138,7 @@ export default function Matches() {
       try {
         await api.post(`/connections/send/${user.id}`);
       } catch (e) {
-        await api.post(`/connection-requests/send/${user.id}`);
+        await api.post(`/connections/send/${user.id}`);
       }
       Toast.show({ type: 'success', text1: 'Interest Sent!', text2: `Interest sent to ${user.fullName || 'User'}.` });
     } catch (err) {
@@ -130,24 +148,33 @@ export default function Matches() {
   };
 
   const handleChat = (user) => {
-    // Check if match is accepted, else show warning
-    if (user.connectionStatus !== 'ACCEPTED') {
-      Toast.show({ type: 'info', text1: 'Not Connected', text2: 'Interest must be accepted before chatting.' });
-    } else {
-      router.push({ pathname: `/chat/${user.id}` });
-    }
+    console.log('Opening chat:', {
+      targetUserId: user.id,
+      name: user.fullName || user.name || 'User',
+      route: '/chat/[id]',
+    });
+
+    router.push({ 
+      pathname: '/chat/[id]', 
+      params: { 
+        id: String(user.id),
+        name: user.fullName || user.name || 'User',
+        photo: user.profilePhotoUrl || user.profilePhoto || '' 
+      } 
+    });
   };
 
   const renderStoryCard = ({ item, index }) => {
     if (index === 0) {
       // My Profile story
-      const myPhotoUrl = fixUrl(currentUser?.profilePhotoUrl) || fixUrl(currentUser?.profilePhoto);
+      const myAvatarUri = getFallbackAvatar(currentUser);
       return (
         <TouchableOpacity style={styles.storyCard} onPress={() => router.push('/profile')}>
           <Image 
-            source={myPhotoUrl ? { uri: myPhotoUrl } : require('../../../assets/images/female_avatar.png')} 
+            source={{ uri: myAvatarUri }} 
             style={styles.myStoryImage} 
             contentFit="cover"
+            onError={(e) => console.log('Image failed:', myAvatarUri, e.nativeEvent)}
           />
           <View style={styles.myStoryBottom}>
             <View style={styles.addStoryBtn}>
@@ -161,18 +188,30 @@ export default function Matches() {
 
     // Other matches stories
     const matchUser = item;
-    const storyPhoto = matchUser.photos && matchUser.photos.length > 0 ? { uri: fixUrl(matchUser.photos[0]) } : (matchUser.profilePhotoUrl ? { uri: matchUser.profilePhotoUrl } : { uri: 'https://ui-avatars.com/api/?background=E91E63&color=fff&name=' + encodeURIComponent(matchUser.fullName || 'User') });
-    const avatarPhoto = matchUser.profilePhotoUrl ? { uri: matchUser.profilePhotoUrl } : { uri: 'https://ui-avatars.com/api/?background=E91E63&color=fff&name=' + encodeURIComponent(matchUser.fullName || 'User') };
+    const storyPhoto = matchUser.photos && matchUser.photos.length > 0 
+      ? { uri: fixUrl(matchUser.photos[0]) } 
+      : { uri: getFallbackAvatar(matchUser) };
+    const avatarPhoto = { uri: getFallbackAvatar(matchUser) };
     
     return (
       <View style={styles.storyCard}>
-        <Image source={storyPhoto} style={styles.storyFullImage} contentFit="cover" />
+        <Image 
+          source={storyPhoto} 
+          style={styles.storyFullImage} 
+          contentFit="cover" 
+          onError={(e) => console.log('Image failed:', storyPhoto?.uri || storyPhoto, e.nativeEvent)}
+        />
         <LinearGradient
           colors={['transparent', 'rgba(0,0,0,0.7)']}
           style={styles.storyOverlay}
         >
           <View style={styles.storyUserInfo}>
-            <Image source={avatarPhoto} style={styles.storySmallAvatar} contentFit="cover" />
+            <Image 
+              source={avatarPhoto} 
+              style={styles.storySmallAvatar} 
+              contentFit="cover" 
+              onError={(e) => console.log('Image failed:', avatarPhoto?.uri || avatarPhoto, e.nativeEvent)}
+            />
             <Text style={styles.storyNameOverlay} numberOfLines={1}>
               {matchUser.fullName ? matchUser.fullName.split(' ')[0] : 'User'}
             </Text>

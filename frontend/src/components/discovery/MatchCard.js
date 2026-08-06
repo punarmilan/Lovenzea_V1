@@ -3,11 +3,10 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Colors, Spacing, Typography, Shadows } from '../../constants/Theme';
 import { Heart, MoreHorizontal, Star, MapPin } from 'lucide-react-native';
 import { Image } from 'expo-image';
+import { normalizePhotoUrl, getFallbackAvatar } from '../../utils/imageUrl';
 
 const MatchCard = ({ user, onConnect, onMore, onPress }) => {
-  const getFallbackUri = (item) =>
-    item.profilePhoto ||
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name)}&background=E91E63&color=fff&size=500`;
+  const getFallbackUri = (item) => getFallbackAvatar(item);
 
   const age = user.dob ? new Date().getFullYear() - new Date(user.dob).getFullYear() : 'N/A';
 
@@ -22,6 +21,7 @@ const MatchCard = ({ user, onConnect, onMore, onPress }) => {
         style={styles.image}
         contentFit="cover"
         transition={500}
+        onError={(e) => console.log('[MatchCard] Image failed:', getFallbackUri(user), e)}
       />
       
       {/* Match Percentage Badge */}

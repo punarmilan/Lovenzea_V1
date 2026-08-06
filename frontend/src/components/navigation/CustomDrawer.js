@@ -27,6 +27,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { Colors, Spacing, Typography } from '../../constants/Theme';
 import DrawerItem from './DrawerItem';
+import { normalizePhotoUrl, getFallbackAvatar } from '../../utils/imageUrl';
 
 const CustomDrawer = (props) => {
   const router = useRouter();
@@ -59,8 +60,12 @@ const CustomDrawer = (props) => {
           activeOpacity={0.9}
         >
           <View style={styles.avatarContainer}>
-            {user?.profilePhotoUrl ? (
-              <Image source={{ uri: user.profilePhotoUrl }} style={styles.avatar} />
+            {user?.profilePhotoUrl || user?.profilePhoto ? (
+              <Image
+                source={{ uri: getFallbackAvatar(user) }}
+                style={styles.avatar}
+                onError={(e) => console.log('[Drawer] Avatar failed:', e.nativeEvent)}
+              />
             ) : (
               <View style={[styles.avatar, styles.placeholderAvatar]}>
                 <Text style={styles.avatarText}>

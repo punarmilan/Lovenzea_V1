@@ -123,9 +123,17 @@ services:
       SPRING_RABBITMQ_HOST: rabbitmq
       MINIO_URL: http://minio:9000
       MINIO_PUBLIC_URL: https://app.lovenzea.online/api/photos
+      DB_USERNAME: ${DB_USERNAME:-root}
       DB_PASSWORD: ${DB_PASSWORD}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-lovenzea-photos}
       JWT_SECRET: ${JWT_SECRET}
+      CHAT_ENCRYPTION_KEY: ${CHAT_ENCRYPTION_KEY}
       SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME}
+      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET}
       LOG_LEVEL_APP: INFO
     deploy:
       resources:
@@ -135,8 +143,8 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 40s
+      retries: 5
+      start_period: 60s
 
   web-frontend:
     image: ${DOCKERHUB_USERNAME:-worknai009}/lovenzea-web-frontend:latest

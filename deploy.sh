@@ -2,6 +2,7 @@
 set -e
 
 export DOCKERHUB_USERNAME="${DOCKERHUB_USERNAME:-worknai009}"
+export COMPOSE_PROJECT_NAME=lovenzea
 
 TARGET_DIR="/var/www/lovenzea/source"
 REPO_URL="https://github.com/punarmilan/Lovenzea_V1.git"
@@ -39,6 +40,10 @@ nginx -t 2>/dev/null || docker exec lovenzea-gateway nginx -t 2>/dev/null || tru
 # 5. Pull latest Docker images (all services)
 echo "-> Pulling latest Docker images..."
 docker compose pull backend web-frontend admin-frontend
+
+# 5.1 Clean up old containers from previous projects
+echo "-> Cleaning up old containers from previous projects..."
+docker rm -f punarmilan-backend punarmilan-frontend punarmilan-login-server punarmilan-gateway punarmilan-mysql punarmilan-redis punarmilan-rabbitmq punarmilan-minio punarmilan-minio-config punarmilan-watchtower truth-life-frontend 2>/dev/null || true
 
 # 6. Start / update Docker containers
 echo "-> Launching Docker Compose stack..."

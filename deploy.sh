@@ -44,6 +44,7 @@ docker compose pull backend web-frontend admin-frontend
 # 5.1 Clean up old containers from previous projects
 echo "-> Cleaning up old containers from previous projects..."
 docker rm -f punarmilan-backend punarmilan-frontend punarmilan-login-server punarmilan-gateway punarmilan-mysql punarmilan-redis punarmilan-rabbitmq punarmilan-minio punarmilan-minio-config punarmilan-watchtower truth-life-frontend 2>/dev/null || true
+docker rm -f lovenzea-watchtower lovenzea-gateway lovenzea-backend lovenzea-web-frontend lovenzea-admin-frontend lovenzea-mysql lovenzea-redis lovenzea-rabbitmq lovenzea-minio lovenzea-minio-config 2>/dev/null || true
 
 # 6. Start / update Docker containers
 echo "-> Launching Docker Compose stack..."

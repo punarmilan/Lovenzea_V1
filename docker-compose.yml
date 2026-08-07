@@ -117,6 +117,7 @@ services:
       minio:
         condition: service_healthy
     environment:
+      SERVER_PORT: 8080
       SPRING_DATASOURCE_MASTER_URL: jdbc:mysql://mysql:3306/lovenzea_db
       SPRING_DATASOURCE_REPLICA_URL: jdbc:mysql://mysql:3306/lovenzea_db
       SPRING_DATA_REDIS_HOST: redis

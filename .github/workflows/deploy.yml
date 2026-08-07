@@ -158,7 +158,13 @@ jobs:
             docker rm -f lovenzea-watchtower lovenzea-gateway lovenzea-backend lovenzea-web-frontend lovenzea-admin-frontend lovenzea-mysql lovenzea-redis lovenzea-rabbitmq lovenzea-minio lovenzea-minio-config 2>/dev/null || true
 
             echo "--- Deploying Docker Compose services ---"
-            docker compose up -d --remove-orphans
+            docker compose up -d --remove-orphans || {
+              echo "--- Deployment failed, showing backend logs ---"
+              docker logs lovenzea-backend --tail 100 2>&1 || true
+              echo "--- Backend container status ---"
+              docker inspect lovenzea-backend --format='{{.State.Status}} {{.State.Health.Status}}' 2>&1 || true
+              exit 1
+            }
 
             echo "--- Reloading Nginx Gateway ---"
             docker exec lovenzea-gateway nginx -s reload 2>/dev/null || true

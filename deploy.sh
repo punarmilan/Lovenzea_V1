@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+export DOCKERHUB_USERNAME="${DOCKERHUB_USERNAME:-worknai009}"
+
 TARGET_DIR="/var/www/lovenzea/source"
 REPO_URL="https://github.com/punarmilan/Lovenzea_V1.git"
 

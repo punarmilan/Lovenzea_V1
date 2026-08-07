@@ -123,6 +123,7 @@ jobs:
           envs: ENV_FILE, DOCKERHUB_USERNAME
           script: |
             set -e
+            export DOCKERHUB_USERNAME="${DOCKERHUB_USERNAME:-worknai009}"
             echo "--- Preparing deployment directory ---"
             mkdir -p /var/www/lovenzea/source
             cd /var/www/lovenzea/source

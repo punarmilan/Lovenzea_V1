@@ -35,4 +35,4 @@ yarn-error.log*
 # Application logs
 logs/
 *.log
-punarmilan-backend.log*
+lovenzea-backend.log*

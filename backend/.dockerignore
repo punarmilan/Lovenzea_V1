@@ -1,0 +1,13 @@
+target/
+*.log
+.idea/
+.vscode/
+*.iml
+.git/
+.gitignore
+.env
+.env.*
+!.env.example
+uploads/
+curl_output.txt
+testPatch.ps1

@@ -1,11 +1,11 @@
 #!/bin/bash
 set -e
 
-TARGET_DIR="/var/www/punarmilan/source"
-REPO_URL="https://github.com/punarmilan/LovenZea_Native_App.git"
+TARGET_DIR="/var/www/lovenzea/source"
+REPO_URL="https://github.com/punarmilan/Lovenzea_V1.git"
 
 echo "========================================="
-echo " Starting Punarmilan VPS Setup & Deploy  "
+echo " Starting LovenZea VPS Setup & Deploy  "
 echo "========================================="
 
 # 1. Ensure target directory exists
@@ -29,19 +29,24 @@ if [ ! -f ".env" ]; then
     echo "⚠️ Please edit $TARGET_DIR/.env with your production credentials."
 fi
 
-# 4. Sync gateway.nginx.conf to parent path /var/www/punarmilan/
+# 4. Sync gateway.nginx.conf to parent path /var/www/lovenzea/
 echo "-> Copying Nginx Gateway configuration..."
-cp gateway.nginx.conf /var/www/punarmilan/gateway.nginx.conf
+cp gateway.nginx.conf /var/www/lovenzea/gateway.nginx.conf
+nginx -t 2>/dev/null || docker exec lovenzea-gateway nginx -t 2>/dev/null || true
 
-# 5. Pull latest Docker images
+# 5. Pull latest Docker images (all services)
 echo "-> Pulling latest Docker images..."
-docker compose pull
+docker compose pull backend web-frontend admin-frontend
 
 # 6. Start / update Docker containers
 echo "-> Launching Docker Compose stack..."
 docker compose up -d --remove-orphans
 
-# 7. Cleanup unused docker images
+# 7. Reload nginx gateway to pick up new config
+echo "-> Reloading Nginx Gateway..."
+docker exec lovenzea-gateway nginx -s reload 2>/dev/null || true
+
+# 8. Cleanup unused docker images
 echo "-> Cleaning up old images..."
 docker image prune -f
 

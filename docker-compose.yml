@@ -3,11 +3,11 @@ version: '3.8'
 services:
   mysql:
     image: mysql:8.0
-    container_name: punarmilan-mysql
+    container_name: lovenzea-mysql
     ports:
       - "3306:3306"
     environment:
-      MYSQL_DATABASE: punarmilan_db
+      MYSQL_DATABASE: lovenzea_db
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
     volumes:
       - mysql_data:/var/lib/mysql
@@ -25,7 +25,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: punarmilan-redis
+    container_name: lovenzea-redis
     ports:
       - "6379:6379"
     restart: unless-stopped
@@ -41,7 +41,7 @@ services:
 
   rabbitmq:
     image: rabbitmq:3-management-alpine
-    container_name: punarmilan-rabbitmq
+    container_name: lovenzea-rabbitmq
     command: >
       sh -c "rabbitmq-plugins enable --offline rabbitmq_stomp && rabbitmq-server"
     ports:
@@ -65,7 +65,7 @@ services:
 
   minio:
     image: minio/minio
-    container_name: punarmilan-minio
+    container_name: lovenzea-minio
     ports:
       - "9000-9001:9000-9001"
     restart: unless-stopped
@@ -87,22 +87,22 @@ services:
 
   minio-config:
     image: minio/mc
-    container_name: punarmilan-minio-config
+    container_name: lovenzea-minio-config
     depends_on:
       minio:
         condition: service_healthy
     entrypoint: >
       /bin/sh -c "
       until (/usr/bin/mc alias set local http://minio:9000 ${MINIO_ACCESS_KEY:-minioadmin} ${MINIO_SECRET_KEY:-minioadmin}) do echo 'Waiting for MinIO...' && sleep 1; done;
-      /usr/bin/mc mb local/punarmilan-photos || true;
-      /usr/bin/mc anonymous set download local/punarmilan-photos;
+      /usr/bin/mc mb local/lovenzea-photos || true;
+      /usr/bin/mc anonymous set download local/lovenzea-photos;
       echo 'MinIO Configuration Applied Successfully!';
       exit 0;
       "
 
   backend:
-    image: worknai009/punarmilan-backend:latest
-    container_name: punarmilan-backend
+    image: worknai009/lovenzea-backend:latest
+    container_name: lovenzea-backend
     env_file: .env
     ports:
       - "8080:8080"
@@ -117,8 +117,8 @@ services:
       minio:
         condition: service_healthy
     environment:
-      SPRING_DATASOURCE_MASTER_URL: jdbc:mysql://mysql:3306/punarmilan_db
-      SPRING_DATASOURCE_REPLICA_URL: jdbc:mysql://mysql:3306/punarmilan_db
+      SPRING_DATASOURCE_MASTER_URL: jdbc:mysql://mysql:3306/lovenzea_db
+      SPRING_DATASOURCE_REPLICA_URL: jdbc:mysql://mysql:3306/lovenzea_db
       SPRING_DATA_REDIS_HOST: redis
       SPRING_RABBITMQ_HOST: rabbitmq
       MINIO_URL: http://minio:9000
@@ -138,23 +138,49 @@ services:
       retries: 3
       start_period: 40s
 
+  web-frontend:
+    image: worknai009/lovenzea-web-frontend:latest
+    container_name: lovenzea-web-frontend
+    restart: unless-stopped
+    expose:
+      - "80"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  admin-frontend:
+    image: worknai009/lovenzea-admin-frontend:latest
+    container_name: lovenzea-admin-frontend
+    restart: unless-stopped
+    expose:
+      - "80"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
   nginx-gateway:
     image: nginx:alpine
-    container_name: punarmilan-gateway
+    container_name: lovenzea-gateway
     restart: always
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - /var/www/punarmilan/gateway.nginx.conf:/etc/nginx/nginx.conf:ro
+      - /var/www/lovenzea/gateway.nginx.conf:/etc/nginx/nginx.conf:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       backend:
         condition: service_healthy
+      web-frontend:
+        condition: service_started
+      admin-frontend:
+        condition: service_started
 
   watchtower:
     image: containrrr/watchtower
-    container_name: punarmilan-watchtower
+    container_name: lovenzea-watchtower
     restart: always
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock

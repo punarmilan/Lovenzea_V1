@@ -70,7 +70,7 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/lovenzea-web-frontend:${{ github.sha }}
 
   # ============================================================
-  # JOB 3: Build & Push Admin Frontend (asp.lovenzea.online)
+  # JOB 3: Build & Push Admin Frontend (asp-admin.lovenzea.online)
   # ============================================================
   build-admin-frontend:
     name: Build & Push Admin Frontend

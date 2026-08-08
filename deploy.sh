@@ -34,8 +34,10 @@ if [ ! -f ".env" ]; then
 fi
 
 # 4. Sync gateway.nginx.conf into the deployment directory used by docker-compose
-echo "-> Copying Nginx Gateway configuration..."
-cp gateway.nginx.conf "$TARGET_DIR/gateway.nginx.conf"
+echo "-> Gateway configuration ready..."
+if [ "$(realpath gateway.nginx.conf)" != "$(realpath "$TARGET_DIR/gateway.nginx.conf")" ]; then
+    cp gateway.nginx.conf "$TARGET_DIR/gateway.nginx.conf"
+fi
 
 # 4.1 Issue/expand SSL certificates for all live domains
 echo "-> Ensuring SSL certificates exist..."

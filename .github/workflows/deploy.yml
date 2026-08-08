@@ -160,8 +160,10 @@ jobs:
               exit 1
             fi
 
-            echo "--- Copying gateway configuration ---"
-            cp gateway.nginx.conf "$DEPLOY_DIR/gateway.nginx.conf"
+            echo "--- Gateway configuration ready ---"
+            if [ "$(realpath gateway.nginx.conf)" != "$(realpath "$DEPLOY_DIR/gateway.nginx.conf")" ]; then
+              cp gateway.nginx.conf "$DEPLOY_DIR/gateway.nginx.conf"
+            fi
 
             echo "--- Ensuring SSL certificates exist ---"
             mkdir -p /var/www/certbot

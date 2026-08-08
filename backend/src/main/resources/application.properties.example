@@ -10,6 +10,10 @@ logging.level.org.hibernate.transaction=INFO
 # Server Configuration
 server.port=8080
 server.tomcat.threads.max=400
+
+# CORS Allowed Origins (WebSocket + HTTP)
+cors.allowed-origins=${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:5174,http://localhost:5175,https://lovenzea.com,https://www.lovenzea.com,https://lovenzea.in,https://www.lovenzea.in,https://lovenzea.online,https://www.lovenzea.online,https://asp-admin.lovenzea.online}
+
 # Master Database Configuration (Write)
 spring.datasource.master.url=${SPRING_DATASOURCE_MASTER_URL:jdbc:mysql://localhost:3306/lovenzea_db?createDatabaseIfNotExist=true}
 spring.datasource.master.username=${DB_USERNAME:root}
@@ -46,6 +50,8 @@ minio.url=${MINIO_URL:http://localhost:9000}
 minio.access-key=${MINIO_ACCESS_KEY}
 minio.secret-key=${MINIO_SECRET_KEY}
 minio.bucket-name=${MINIO_BUCKET_NAME:lovenzea-photos}
+minio.public-url=${MINIO_PUBLIC_URL:}
+minio.enabled=${MINIO_ENABLED:true}
 minio.expiry=7
 
 # JWT Configuration
@@ -67,6 +73,8 @@ spring.mail.port=587
 spring.mail.username=${SPRING_MAIL_USERNAME}
 spring.mail.password=${SPRING_MAIL_PASSWORD}
 app.frontend-url=${FRONTEND_URL:https://lovenzea.com}
+app.cookie.secure=${APP_COOKIE_SECURE:false}
+app.cookie.same-site=${APP_COOKIE_SAME_SITE:Lax}
 spring.mail.properties.mail.smtp.auth=true
 spring.mail.properties.mail.smtp.starttls.enable=true
 spring.mail.properties.mail.smtp.starttls.required=true

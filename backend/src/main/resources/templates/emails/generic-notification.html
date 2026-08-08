@@ -22,11 +22,11 @@
             <p>Hello <span th:text="${recipientName}">User</span>,</p>
             <p th:text="${message}">Notification message goes here.</p>
             <p th:if="${senderName != null}">From: <strong th:text="${senderName}">Sender</strong></p>
-            <a href="http://localhost:5173/my-shadi/dashboard" class="button">Visit PunarMilan</a>
+            <a th:href="${frontendUrl + '/my-shadi/dashboard'}" href="https://lovenzea.com/my-shadi/dashboard" class="button">Visit PunarMilan</a>
         </div>
         <div class="footer">
             <p>&copy; 2026 PunarMilan Matrimonial Services. All rights reserved.</p>
-            <p>You received this email because of your alert settings. <a href="http://localhost:5173/settings/alerts">Manage Settings</a></p>
+            <p>You received this email because of your alert settings. <a th:href="${frontendUrl + '/settings/alerts'}" href="https://lovenzea.com/settings/alerts">Manage Settings</a></p>
         </div>
     </div>
 </body>

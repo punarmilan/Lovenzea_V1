@@ -10,7 +10,6 @@ const api = axios.create({
         'Content-Type': 'application/json',
     },
 });
-console.log(import.meta.env.VITE_API_URL);
 
 let isRefreshing = false;
 let failedQueue = [];
@@ -55,7 +54,8 @@ const IMAGE_PROPERTIES = [
     // Other image fields
     'thumbnailUrl', 'coverPhotoUrl', 'idProofUrl', 'bannerUrl', 'avatarUrl', 'imageUrl',
 ];
-const LIVE_URL = 'https://app.lovenzea.online';
+const LIVE_URL = BASE_URL.replace(/\/api\/?$/, '');
+const LIVE_MINIO_URL = LIVE_URL ? `${LIVE_URL}/minio/` : '/minio/';
 
 const formatImageUrls = (obj) => {
     if (!obj || typeof obj !== 'object') return;
@@ -72,8 +72,9 @@ const formatImageUrls = (obj) => {
                 obj[key] = `${LIVE_URL}${cleanPath}`;
             } else if (obj[key] && obj[key].startsWith('http')) {
                 obj[key] = obj[key]
-                    .replace('http://localhost:9000/', 'https://app.lovenzea.online/minio/')
-                    .replace('http://127.0.0.1:9000/', 'https://app.lovenzea.online/minio/')
+                    .replace('http://localhost:9000/', LIVE_MINIO_URL)
+                    .replace('http://127.0.0.1:9000/', LIVE_MINIO_URL)
+                    .replace('http://minio:9000/', LIVE_MINIO_URL)
                     .replace('/punarmilan-photos/punarmilan-photos/', '/punarmilan-photos/')
                     .split('?')[0];
             }

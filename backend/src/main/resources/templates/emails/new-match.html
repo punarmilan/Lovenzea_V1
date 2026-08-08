@@ -74,14 +74,14 @@
             <div class="match-card">
                 <h3 th:text="${senderName}">Match Name</h3>
                 <p th:text="${message}">A brief description or intro message.</p>
-                <a href="http://localhost:5173/my-shadi/matches" class="button">View Profile</a>
+                <a th:href="${frontendUrl + '/my-shadi/matches'}" href="https://lovenzea.com/my-shadi/matches" class="button">View Profile</a>
             </div>
 
             <p style="margin-top: 20px;">Log in today and take the first step towards a beautiful future.</p>
         </div>
         <div class="footer">
             <p>&copy; 2026 PunarMilan Matrimonial Services. All rights reserved.</p>
-            <p>Don't want these alerts? <a href="http://localhost:5173/settings/alerts">Manage Settings</a></p>
+            <p>Don't want these alerts? <a th:href="${frontendUrl + '/settings/alerts'}" href="https://lovenzea.com/settings/alerts">Manage Settings</a></p>
         </div>
     </div>
 </body>

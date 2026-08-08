@@ -11,16 +11,16 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://app.lovenzea.online',
+        target: 'https://api.lovenzea.online',
         changeOrigin: true,
       },
       '/ws': {
-        target: 'wss://app.lovenzea.online',
+        target: 'wss://api.lovenzea.online',
         ws: true,
         changeOrigin: true,
       },
       '/uploads': {
-        target: 'https://app.lovenzea.online',
+        target: 'https://api.lovenzea.online',
         changeOrigin: true,
       }
     }

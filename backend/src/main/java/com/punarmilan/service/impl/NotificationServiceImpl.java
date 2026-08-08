@@ -29,6 +29,9 @@ public class NotificationServiceImpl implements NotificationService {
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
     private final MinioService minioService;
 
+    @org.springframework.beans.factory.annotation.Value("${app.frontend-url:https://lovenzea.com}")
+    private String frontendUrl;
+
     @Override
     @Transactional(readOnly = true)
     public Page<NotificationDTO> getNotifications(User user, int page, int size) {
@@ -119,6 +122,7 @@ public class NotificationServiceImpl implements NotificationService {
                 variables.put("message", message);
                 variables.put("senderName", senderName);
                 variables.put("recipientName", profile.getFullName());
+                variables.put("frontendUrl", normalizeFrontendUrl());
 
                 String subject = "PunarMilan: " + title;
                 String template = getEmailTemplateForType(type);
@@ -128,6 +132,13 @@ public class NotificationServiceImpl implements NotificationService {
         } catch (Exception e) {
             log.error("Error checked/sending email notification: {}", e.getMessage());
         }
+    }
+
+    private String normalizeFrontendUrl() {
+        if (frontendUrl == null || frontendUrl.isBlank()) {
+            return "https://lovenzea.com";
+        }
+        return frontendUrl.endsWith("/") ? frontendUrl.substring(0, frontendUrl.length() - 1) : frontendUrl;
     }
 
     private boolean isEmailEnabledForType(com.fasterxml.jackson.databind.JsonNode settings, NotificationType type) {

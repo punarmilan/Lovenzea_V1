@@ -4,7 +4,8 @@ set -e
 export DOCKERHUB_USERNAME="${DOCKERHUB_USERNAME:-worknai009}"
 export COMPOSE_PROJECT_NAME=lovenzea
 
-TARGET_DIR="/var/www/lovenzea/source"
+TARGET_DIR="${DEPLOY_DIR:-/var/www/lovenzea_v1}"
+DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
 REPO_URL="https://github.com/punarmilan/Lovenzea_V1.git"
 
 echo "========================================="
@@ -18,11 +19,11 @@ cd "$TARGET_DIR"
 # 2. Clone or update repository
 if [ ! -d ".git" ]; then
     echo "-> Cloning repository into $TARGET_DIR..."
-    git clone "$REPO_URL" .
+    git clone --branch "$DEPLOY_BRANCH" "$REPO_URL" .
 else
     echo "-> Updating existing repository..."
-    git fetch origin main || git fetch origin master
-    git reset --hard origin/$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+    git fetch origin "$DEPLOY_BRANCH"
+    git reset --hard "origin/$DEPLOY_BRANCH"
 fi
 
 # 3. Setup .env if it doesn't exist
@@ -32,9 +33,52 @@ if [ ! -f ".env" ]; then
     echo "⚠️ Please edit $TARGET_DIR/.env with your production credentials."
 fi
 
-# 4. Sync gateway.nginx.conf to parent path /var/www/lovenzea/
+# 4. Sync gateway.nginx.conf into the deployment directory used by docker-compose
 echo "-> Copying Nginx Gateway configuration..."
-cp gateway.nginx.conf /var/www/lovenzea/gateway.nginx.conf
+cp gateway.nginx.conf "$TARGET_DIR/gateway.nginx.conf"
+
+# 4.1 Issue/expand SSL certificates for all live domains
+echo "-> Ensuring SSL certificates exist..."
+mkdir -p /var/www/certbot
+
+if ! command -v certbot >/dev/null 2>&1; then
+    echo "certbot not found. Installing certbot..."
+    if command -v apt-get >/dev/null 2>&1; then
+        if [ "$(id -u)" -eq 0 ]; then
+            apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y certbot
+        else
+            sudo -n apt-get update && sudo -n env DEBIAN_FRONTEND=noninteractive apt-get install -y certbot
+        fi
+    else
+        echo "certbot is required but could not be installed automatically."
+        exit 1
+    fi
+fi
+
+ensure_cert() {
+    cert_name="$1"
+    shift
+    common_args="--non-interactive --agree-tos --register-unsafely-without-email --keep-until-expiring --expand --cert-name $cert_name"
+
+    if docker ps --format '{{.Names}}' | grep -qx 'lovenzea-gateway'; then
+        certbot certonly --webroot -w /var/www/certbot $common_args "$@" || {
+            docker stop lovenzea-gateway || true
+            certbot certonly --standalone --preferred-challenges http $common_args "$@"
+        }
+    else
+        docker rm -f lovenzea-gateway 2>/dev/null || true
+        certbot certonly --standalone --preferred-challenges http $common_args "$@" || \
+            certbot certonly --webroot -w /var/www/certbot $common_args "$@"
+    fi
+}
+
+ensure_cert lovenzea.com \
+    -d lovenzea.com -d www.lovenzea.com \
+    -d lovenzea.in -d www.lovenzea.in \
+    -d lovenzea.online -d www.lovenzea.online
+ensure_cert api.lovenzea.online -d api.lovenzea.online
+ensure_cert asp-admin.lovenzea.online -d asp-admin.lovenzea.online
+
 nginx -t 2>/dev/null || docker exec lovenzea-gateway nginx -t 2>/dev/null || true
 
 # 5. Pull latest Docker images (all services)

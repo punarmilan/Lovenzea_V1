@@ -137,17 +137,37 @@ jobs:
             export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-lovenzea}"
             export DEPLOY_DIR="${DEPLOY_DIR:-/var/www/lovenzea_v1}"
             export DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
+            export REPO_URL="https://github.com/punarmilan/Lovenzea_V1.git"
 
             echo "--- Preparing deployment directory ---"
+            echo "Deploy target: $DEPLOY_DIR"
+            echo "Deploy branch: $DEPLOY_BRANCH"
             mkdir -p "$DEPLOY_DIR"
             cd "$DEPLOY_DIR"
+            if [ "$(pwd -P)" != "$(realpath "$DEPLOY_DIR")" ]; then
+              echo "Refusing to deploy from unexpected directory: $(pwd -P)"
+              exit 1
+            fi
+            echo "Working directory: $(pwd -P)"
 
-            if [ ! -d ".git" ]; then
-              echo "Repository not found locally, cloning..."
-              git clone --branch "$DEPLOY_BRANCH" https://github.com/punarmilan/Lovenzea_V1.git .
-            else
+            if [ -d ".git" ]; then
               echo "Pulling latest code from origin..."
-              git fetch origin "$DEPLOY_BRANCH"
+              git remote set-url origin "$REPO_URL" || true
+              if ! git fetch --prune origin "$DEPLOY_BRANCH"; then
+                echo "Git fetch failed. Current remote configuration:"
+                git remote -v || true
+                echo "Fix the checkout in $DEPLOY_DIR or move it aside manually, then rerun deployment."
+                exit 1
+              fi
+            else
+              if [ -n "$(ls -A . 2>/dev/null)" ]; then
+                echo "Deployment directory exists without .git: $DEPLOY_DIR"
+                echo "Move this directory aside manually or empty it, then rerun deployment."
+                exit 1
+              else
+                echo "Repository not found locally, cloning..."
+              fi
+              git clone --branch "$DEPLOY_BRANCH" "$REPO_URL" .
             fi
             git reset --hard "origin/$DEPLOY_BRANCH"
 

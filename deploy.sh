@@ -13,18 +13,37 @@ echo " Starting LovenZea VPS Setup & Deploy  "
 echo "========================================="
 
 # 1. Ensure target directory exists
+echo "Deploy target: $TARGET_DIR"
+echo "Deploy branch: $DEPLOY_BRANCH"
 mkdir -p "$TARGET_DIR"
 cd "$TARGET_DIR"
+if [ "$(pwd -P)" != "$(realpath "$TARGET_DIR")" ]; then
+    echo "Refusing to deploy from unexpected directory: $(pwd -P)"
+    exit 1
+fi
+echo "Working directory: $(pwd -P)"
 
 # 2. Clone or update repository
-if [ ! -d ".git" ]; then
-    echo "-> Cloning repository into $TARGET_DIR..."
-    git clone --branch "$DEPLOY_BRANCH" "$REPO_URL" .
-else
+if [ -d ".git" ]; then
     echo "-> Updating existing repository..."
-    git fetch origin "$DEPLOY_BRANCH"
-    git reset --hard "origin/$DEPLOY_BRANCH"
+    git remote set-url origin "$REPO_URL" || true
+    if ! git fetch --prune origin "$DEPLOY_BRANCH"; then
+        echo "Git fetch failed. Current remote configuration:"
+        git remote -v || true
+        echo "Fix the checkout in $TARGET_DIR or move it aside manually, then rerun deployment."
+        exit 1
+    fi
+else
+    if [ -n "$(ls -A . 2>/dev/null)" ]; then
+        echo "Deployment directory exists without .git: $TARGET_DIR"
+        echo "Move this directory aside manually or empty it, then rerun deployment."
+        exit 1
+    else
+        echo "-> Cloning repository into $TARGET_DIR..."
+    fi
+    git clone --branch "$DEPLOY_BRANCH" "$REPO_URL" .
 fi
+git reset --hard "origin/$DEPLOY_BRANCH"
 
 # 3. Setup .env if it doesn't exist
 if [ ! -f ".env" ]; then

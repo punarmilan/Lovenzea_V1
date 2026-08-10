@@ -15,6 +15,12 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      '/ws': {
+        target: 'https://api.lovenzea.online',
+        ws: true,
+        changeOrigin: true,
+        secure: false,
+      },
       '/uploads': {
         target: 'https://api.lovenzea.online',
         changeOrigin: true,

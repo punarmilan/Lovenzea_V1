@@ -174,9 +174,7 @@ function App() {
   }, [isAuthenticated]);
 
   // WebSocket Connection
-  // NOTE: WS disabled in dev until backend CORS includes http://localhost:5173
   useEffect(() => {
-    if (import.meta.env.DEV) return; // skip in local dev — backend CORS blocks localhost
     if (isAuthenticated && user?.id) {
       dispatch(setCurrentUserId(user.id));
       ChatService.connect(user.id);

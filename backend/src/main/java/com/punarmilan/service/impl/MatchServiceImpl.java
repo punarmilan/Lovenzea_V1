@@ -602,7 +602,8 @@ public class MatchServiceImpl implements MatchService {
                                 .orElseThrow(() -> new com.punarmilan.exception.ResourceNotFoundException("Current user profile not found"));
 
                 Profile targetProfile = profileRepository.findById(targetProfileId)
-                                .orElseThrow(() -> new com.punarmilan.exception.ResourceNotFoundException("Target profile not found"));
+                                .or(() -> profileRepository.findByUserId(targetProfileId))
+                                .orElseThrow(() -> new com.punarmilan.exception.ResourceNotFoundException("Target profile not found: " + targetProfileId));
 
                 PartnerPreference myPref = partnerPreferenceRepository.findByUser(currentUser).orElse(null);
                 PartnerPreference targetPref = targetProfile.getUser() != null

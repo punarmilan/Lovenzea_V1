@@ -750,7 +750,8 @@ public class ProfileServiceImpl implements ProfileService {
     @Cacheable(value = "profiles", key = "#userId")
     public ProfileDTO getProfileByUserId(Long userId, User viewer) {
         Profile profile = profileRepository.findByUserId(userId)
-                .orElseThrow(() -> new com.punarmilan.exception.ResourceNotFoundException("Profile not found for user: " + userId));
+                .or(() -> profileRepository.findById(userId))
+                .orElseThrow(() -> new com.punarmilan.exception.ResourceNotFoundException("Profile not found for ID: " + userId));
         return mapToDTO(profile, viewer);
     }
 

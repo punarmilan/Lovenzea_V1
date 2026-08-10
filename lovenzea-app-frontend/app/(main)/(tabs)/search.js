@@ -211,6 +211,7 @@ export default function SearchScreen() {
       <ScrollView 
         ref={scrollViewRef}
         showsVerticalScrollIndicator={true} 
+        persistentScrollbar={true}
         contentContainerStyle={styles.scrollContent}
       >
         

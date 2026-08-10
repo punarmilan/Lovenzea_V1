@@ -191,7 +191,7 @@ const PremiumScreen = () => {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={styles.scrollContent}>
+      <ScrollView showsVerticalScrollIndicator={true} persistentScrollbar={true} contentContainerStyle={styles.scrollContent}>
         
         {/* Header Hero Section */}
         <View style={styles.heroSection}>

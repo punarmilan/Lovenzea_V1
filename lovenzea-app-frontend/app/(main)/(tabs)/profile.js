@@ -441,6 +441,7 @@ export default function Profile() {
       <ScrollView 
         style={styles.container} 
         showsVerticalScrollIndicator={true}
+        persistentScrollbar={true}
         contentContainerStyle={{ paddingBottom: isEditing ? 80 : 30 }}
       >
       

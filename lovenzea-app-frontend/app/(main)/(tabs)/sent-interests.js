@@ -407,6 +407,7 @@ export default function SentInterestsScreen() {
             columnWrapperStyle={{ gap: 12, paddingHorizontal: 16 }}
             contentContainerStyle={{ paddingTop: 12, paddingBottom: 30 }}
             showsVerticalScrollIndicator={true}
+            persistentScrollbar={true}
           />
         ) : (
           <View style={styles.emptyState}>
@@ -422,6 +423,7 @@ export default function SentInterestsScreen() {
           renderItem={renderItem}
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={true}
+          persistentScrollbar={true}
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Image

@@ -260,6 +260,7 @@ export default function Matches() {
         data={profiles}
         keyExtractor={(item) => item.id.toString()}
         showsVerticalScrollIndicator={true}
+        persistentScrollbar={true}
         contentContainerStyle={{ paddingBottom: 100 }}
         ListHeaderComponent={
           <>

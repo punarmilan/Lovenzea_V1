@@ -93,15 +93,43 @@ html, body {
 	}
 }
 
-/* Hide all scrollbars globally */
-*::-webkit-scrollbar {
+/* Custom Elegant Page Scrollbar */
+::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+
+::-webkit-scrollbar-track {
+	background: #FFF8F5;
+}
+
+::-webkit-scrollbar-thumb {
+	background: #E88C8C;
+	border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: #B54768;
+}
+
+/* Firefox */
+* {
+	scrollbar-width: thin;
+	scrollbar-color: #E88C8C #FFF8F5;
+}
+
+/* Utility to hide scrollbars only on small inner components like carousels & drawers */
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-hide::-webkit-scrollbar {
 	display: none !important;
 	width: 0 !important;
 	height: 0 !important;
 }
-* {
-	scrollbar-width: none !important; /* Firefox */
-	-ms-overflow-style: none !important; /* IE/Edge */
+
+.no-scrollbar,
+.scrollbar-hide {
+	-ms-overflow-style: none !important;
+	scrollbar-width: none !important;
 }
 
 /* Custom animations */

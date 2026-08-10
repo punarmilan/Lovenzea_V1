@@ -280,6 +280,7 @@ export default function SpecialServices() {
 
       <ScrollView 
         showsVerticalScrollIndicator={true} 
+        persistentScrollbar={true}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 160 }]}
       >
         {/* ─── Hero Section ─── */}

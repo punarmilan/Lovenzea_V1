@@ -6,11 +6,11 @@ import { PHOTO_BASE_URL } from '../services/api';
 //  Converts any photo URL variant returned by the backend into the canonical
 //  public MinIO URL served by Nginx:
 //
-//    https://app.lovenzea.online/minio/<objectPath>
+//    https://api.lovenzea.online/minio/<objectPath>
 //
 //  Supported input formats
 //  ───────────────────────
-//  1.  https://app.lovenzea.online/minio/...          → returned unchanged
+//  1.  https://api.lovenzea.online/minio/...          → returned unchanged
 //  2.  http://localhost:9000/punarmilan-photos/...     → strips bucket prefix
 //  3.  http://127.0.0.1:9000/punarmilan-photos/...    → strips bucket prefix
 //  4.  http://minio:9000/punarmilan-photos/...        → strips bucket prefix
@@ -37,7 +37,7 @@ export const normalizePhotoUrl = (url) => {
   if (!clean) return null;
 
   // ── 1. Already the canonical public URL ─────────────────────────────────
-  if (clean.startsWith('https://app.lovenzea.online/minio/')) {
+  if (clean.startsWith('https://api.lovenzea.online/minio/')) {
     return clean;
   }
 
@@ -61,7 +61,7 @@ export const normalizePhotoUrl = (url) => {
 
   // ── 7. Relative /minio/… ────────────────────────────────────────────────
   if (clean.startsWith('/minio/')) {
-    return `https://app.lovenzea.online${clean}`;
+    return `https://api.lovenzea.online${clean}`;
   }
 
   // ── 8. Relative /api/photos/… ───────────────────────────────────────────

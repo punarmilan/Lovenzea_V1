@@ -6,11 +6,11 @@ import { router } from 'expo-router';
 //  Public backend endpoints (VPS — no private credentials here)
 // ──────────────────────────────────────────────────────────────────────────────
 
-export const BASE_URL      = 'https://app.lovenzea.online/api';
-export const SOCKET_URL    = 'https://app.lovenzea.online';
-export const STOMP_URL     = 'wss://app.lovenzea.online/ws';
-export const SOCKJS_URL    = 'https://app.lovenzea.online/ws';
-export const PHOTO_BASE_URL = 'https://app.lovenzea.online/minio';
+export const BASE_URL      = 'https://api.lovenzea.online/api';
+export const SOCKET_URL    = 'https://api.lovenzea.online';
+export const STOMP_URL     = 'wss://api.lovenzea.online/ws';
+export const SOCKJS_URL    = 'https://api.lovenzea.online/ws';
+export const PHOTO_BASE_URL = 'https://api.lovenzea.online/minio';
 
 // ──────────────────────────────────────────────────────────────────────────────
 //  Axios instance for standard JSON REST requests

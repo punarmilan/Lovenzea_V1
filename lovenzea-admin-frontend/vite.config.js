@@ -12,17 +12,20 @@ export default defineConfig({
     port: 5174,
     proxy: {
       '/api': {
-        target: 'https://app.lovenzea.online',
+        target: 'https://api.lovenzea.online',
         changeOrigin: true,
+        secure: false,
       },
       '/ws': {
-        target: 'wss://app.lovenzea.online',
+        target: 'https://api.lovenzea.online',
         ws: true,
         changeOrigin: true,
+        secure: false,
       },
       '/uploads': {
-        target: 'https://app.lovenzea.online',
+        target: 'https://api.lovenzea.online',
         changeOrigin: true,
+        secure: false,
       }
     }
   }

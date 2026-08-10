@@ -11,18 +11,17 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://app.lovenzea.online',
+        target: 'https://api.lovenzea.online',
         changeOrigin: true,
-      },
-      '/ws': {
-        target: 'wss://app.lovenzea.online',
-        ws: true,
-        changeOrigin: true,
+        secure: false,
       },
       '/uploads': {
-        target: 'https://app.lovenzea.online',
+        target: 'https://api.lovenzea.online',
         changeOrigin: true,
+        secure: false,
       }
+      // NOTE: /ws proxy removed in dev — WS disabled until backend CORS includes localhost
     }
   }
 })
+

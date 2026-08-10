@@ -406,7 +406,7 @@ export default function SentInterestsScreen() {
             numColumns={2}
             columnWrapperStyle={{ gap: 12, paddingHorizontal: 16 }}
             contentContainerStyle={{ paddingTop: 12, paddingBottom: 30 }}
-            showsVerticalScrollIndicator={false}
+            showsVerticalScrollIndicator={true}
           />
         ) : (
           <View style={styles.emptyState}>
@@ -421,7 +421,7 @@ export default function SentInterestsScreen() {
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={styles.listContainer}
-          showsVerticalScrollIndicator={false}
+          showsVerticalScrollIndicator={true}
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Image

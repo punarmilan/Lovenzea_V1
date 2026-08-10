@@ -440,7 +440,7 @@ export default function Profile() {
     >
       <ScrollView 
         style={styles.container} 
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
         contentContainerStyle={{ paddingBottom: isEditing ? 80 : 30 }}
       >
       

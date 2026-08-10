@@ -475,7 +475,7 @@ export default function DiscoveryDashboard() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#2D1B22" />
       
-      <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+      <ScrollView showsVerticalScrollIndicator={true} bounces={false}>
         
         {/* ─── Header Section (Rose Gold) ─── */}
         <LinearGradient

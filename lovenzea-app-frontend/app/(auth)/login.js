@@ -70,7 +70,7 @@ export default function Login() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ flex: 1 }}
         >
-          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={true}>
             
             {/* ─── Top Section (Logo & Headline) ─── */}
             <SafeAreaView edges={['top']} />

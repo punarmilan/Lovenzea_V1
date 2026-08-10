@@ -259,7 +259,7 @@ export default function Matches() {
       <FlatList
         data={profiles}
         keyExtractor={(item) => item.id.toString()}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
         contentContainerStyle={{ paddingBottom: 100 }}
         ListHeaderComponent={
           <>

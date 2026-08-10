@@ -224,7 +224,7 @@ export default function EditProfile() {
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
         keyboardShouldPersistTaps="handled"
       >
         {/* ── Avatar Section ── */}

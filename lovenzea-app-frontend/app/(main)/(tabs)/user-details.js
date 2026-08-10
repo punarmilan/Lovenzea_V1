@@ -147,7 +147,7 @@ export default function UserDetails() {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
+      <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={{ paddingBottom: 50 }}>
         
         {/* ─── Header Image Backdrop ─── */}
         <View style={styles.imageBackdropContainer}>

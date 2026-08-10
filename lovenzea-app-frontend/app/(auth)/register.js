@@ -133,7 +133,7 @@ export default function Register() {
         <LinearGradient colors={['rgba(255, 248, 246, 0.4)', '#FFF6F5', '#FFF6F5']} style={StyleSheet.absoluteFillObject} />
 
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={true} keyboardShouldPersistTaps="handled">
             
             <SafeAreaView edges={['top']} />
             <Animated.View entering={FadeInDown.duration(600).delay(100)} style={styles.topSection}>

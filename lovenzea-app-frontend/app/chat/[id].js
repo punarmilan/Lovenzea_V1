@@ -301,7 +301,7 @@ export default function ChatRoom() {
         renderItem={renderMessage}
         contentContainerStyle={styles.messageList}
         inverted
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
       />
 
       <View style={styles.inputWrapper}>

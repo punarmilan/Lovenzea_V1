@@ -210,7 +210,7 @@ export default function SearchScreen() {
 
       <ScrollView 
         ref={scrollViewRef}
-        showsVerticalScrollIndicator={false} 
+        showsVerticalScrollIndicator={true} 
         contentContainerStyle={styles.scrollContent}
       >
         

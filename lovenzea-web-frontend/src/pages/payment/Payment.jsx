@@ -1,22 +1,24 @@
- import React, { useState, useEffect } from 'react';
- import { createPortal } from 'react-dom';
- import api from '../../services/api';
- import bannerBg from '../../assets/image/banner-bg.png';
- import Swal from 'sweetalert2';
- import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import api from '../../services/api';
+import bannerBg from '../../assets/image/banner-bg.png';
+import Swal from 'sweetalert2';
+import { useNavigate } from "react-router-dom";
 import {
     ShieldCheck,
-  Crown,
-  Sparkles
-} from "lucide-react";
- import { X, Check, HelpCircle, ChevronDown, ChevronRight, Navigation } from 'lucide-react';
- import FaqSection from './FaqSection';
- import TestimalCarousel from './TestimalCarousel';
- 
- import HelpDropdown from '../../components/HelpDropdown';
+    Crown,
+    Sparkles,
+    X,
+    Check,
+    HelpCircle,
+    ChevronRight,
+    Navigation
+} from 'lucide-react';
+import FaqSection from './FaqSection';
+import TestimalCarousel from './TestimalCarousel';
 
- function Payment() {
-     const [selectedPlan, setSelectedPlan] = useState(null); 
+function Payment() {
+    const [selectedPlan, setSelectedPlan] = useState(null); 
     const [showModal, setShowModal] = useState(false);
     const [orderDetails, setOrderDetails] = useState({
         addContacts: false,
@@ -24,13 +26,86 @@ import {
         contributeLovenZea: true
     });
 
-    const navigate = useNavigate()
+    const navigate = useNavigate();
 
+    const DEFAULT_MEMBERSHIP_PLANS = [
+        {
+            id: 1,
+            name: "Basic Plan",
+            duration: "1 Month",
+            originalPrice: 1299,
+            discountedPrice: 999,
+            perMonth: 999,
+            discount: 23,
+            badge: null,
+            features: ["Direct Chat Messaging", "50 Contact Views", "Standard Profile Visibility", "Basic Support"],
+            extraContacts: 20,
+            extraContactPrice: 255,
+            promotePrice: 339,
+            contribution: 17,
+            icon: <Navigation size={28} className="text-[#1a56db] fill-[#1a56db]" />,
+            design: {
+                bg: "bg-gradient-to-b from-[#eff6ff] to-white border-[#dbeafe]",
+                textMain: "text-[#1a56db]",
+                badgeBg: "bg-[#dbeafe] text-[#1a56db]",
+                btnBg: "bg-[#1a56db] hover:bg-[#1e40af] text-white",
+                checkBg: "bg-[#1a56db]",
+                ribbon: null
+            }
+        },
+        {
+            id: 2,
+            name: "Gold Plan",
+            duration: "3 Months",
+            originalPrice: 3499,
+            discountedPrice: 2499,
+            perMonth: 833,
+            discount: 28,
+            badge: "Top Seller",
+            features: ["Unlimited Direct Chat", "200 Contact Views", "Profile Highlight & Boost", "Priority Support", "View Profile Visitors"],
+            extraContacts: 30,
+            extraContactPrice: 255,
+            promotePrice: 339,
+            contribution: 17,
+            icon: <Sparkles size={28} className="text-[#eab308]" />,
+            design: {
+                bg: "bg-gradient-to-b from-[#fefce8] to-white border-[#fef08a]",
+                textMain: "text-[#eab308]",
+                badgeBg: "bg-[#fef08a] text-[#ca8a04]",
+                btnBg: "bg-[#eab308] hover:bg-[#ca8a04] text-white",
+                checkBg: "bg-[#eab308]",
+                ribbon: "TOP SELLER",
+                ribbonBg: "bg-[#eab308]"
+            }
+        },
+        {
+            id: 3,
+            name: "Diamond Plan",
+            duration: "6 Months",
+            originalPrice: 6999,
+            discountedPrice: 4999,
+            perMonth: 833,
+            discount: 30,
+            badge: "Best Value",
+            features: ["All Gold Features", "500 Contact Views", "Top of Search Rankings", "Dedicated Relationship Manager", "Priority Verification"],
+            extraContacts: 50,
+            extraContactPrice: 255,
+            promotePrice: 339,
+            contribution: 17,
+            icon: <Crown size={28} className="text-[#0d9488] fill-[#0d9488]" />,
+            design: {
+                bg: "bg-gradient-to-b from-[#f0fdfa] to-white border-[#ccfbf1]",
+                textMain: "text-[#0d9488]",
+                badgeBg: "bg-[#ccfbf1] text-[#0d9488]",
+                btnBg: "bg-[#0d9488] hover:bg-[#0f766e] text-white",
+                checkBg: "bg-[#0d9488]",
+                ribbon: "BEST VALUE",
+                ribbonBg: "bg-[#0d9488]"
+            }
+        }
+    ];
 
-    // Countdown timer (you can make this dynamic)
-    const [timeLeft] = useState({ hours: 13, minutes: 8, seconds: 56 });
-
-    const [plans, setPlans] = useState([]);
+    const [plans, setPlans] = useState(DEFAULT_MEMBERSHIP_PLANS);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -40,65 +115,79 @@ import {
     const fetchPlans = async () => {
         try {
             const response = await api.get('/subscriptions/plans');
-            console.log("Subscription plans : " , response);
-            if (Array.isArray(response.data)) {
-                // Filter out special services and upgrades from the standard payment page
-                const membershipPlans = response.data.filter(p => !p.planType || p.planType === 'MEMBERSHIP');
+            console.log("Subscription plans : ", response);
+            const rawList = Array.isArray(response?.data) 
+                ? response.data 
+                : (Array.isArray(response) ? response : []);
 
-                // Map backend plans to our UI structure
-                const mappedPlans = membershipPlans.map((p, index) => ({
-                    id: p.id,
-                    name: p.name,
-                    duration: p.durationLabel || `${p.durationInDays / 30} Months`,
-                    originalPrice: p.discountPercentage > 0 
-                        ? Math.round(p.price / (1 - (p.discountPercentage / 100)))
-                        : p.price,
-                    discountedPrice: p.price,
-                    perMonth: Math.round(p.price / (p.durationInDays / 30)),
-                    discount: p.discountPercentage,
-                    badge: p.highlightTag || null,
-                    features: p.features ? p.features.split(',').map(f => f.trim()) : [],
-                    extraContacts: p.extraContacts || 20,
-                    extraContactPrice: p.extraContactPrice || 255,
-                    promotePrice: p.promotePrice || 339,
-                    contribution: 17,
-                    icon: index === 0 ? (
-                        <Navigation size={28} className="text-[#1a56db] fill-[#1a56db]" />
-                    ) : index === 1 ? (
-                        <Sparkles size={28} className="text-[#eab308]" />
-                    ) : (
-                        <Crown size={28} className="text-[#0d9488] fill-[#0d9488]" />
-                    ),
-                    design: index === 0 ? {
-                        bg: "bg-gradient-to-b from-[#eff6ff] to-white border-[#dbeafe]",
-                        textMain: "text-[#1a56db]",
-                        badgeBg: "bg-[#dbeafe] text-[#1a56db]",
-                        btnBg: "bg-[#1a56db] hover:bg-[#1e40af] text-white",
-                        checkBg: "bg-[#1a56db]",
-                        ribbon: null
-                    } : index === 1 ? {
-                        bg: "bg-gradient-to-b from-[#fefce8] to-white border-[#fef08a]",
-                        textMain: "text-[#eab308]",
-                        badgeBg: "bg-[#fef08a] text-[#ca8a04]",
-                        btnBg: "bg-[#eab308] hover:bg-[#ca8a04] text-white",
-                        checkBg: "bg-[#eab308]",
-                        ribbon: "TOP SELLER",
-                        ribbonBg: "bg-[#eab308]"
-                    } : {
-                        bg: "bg-gradient-to-b from-[#f0fdfa] to-white border-[#ccfbf1]",
-                        textMain: "text-[#0d9488]",
-                        badgeBg: "bg-[#ccfbf1] text-[#0d9488]",
-                        btnBg: "bg-[#0d9488] hover:bg-[#0f766e] text-white",
-                        checkBg: "bg-[#0d9488]",
-                        ribbon: "BEST VALUE",
-                        ribbonBg: "bg-[#0d9488]"
-                    }
-                }));
-                setPlans(mappedPlans);
+            if (rawList.length > 0) {
+                const membershipPlans = rawList.filter(p => 
+                    !p.planType || 
+                    p.planType === 'MEMBERSHIP' || 
+                    p.planType === 'PREMIUM' || 
+                    (p.planType !== 'SPECIAL_SERVICE' && p.planType !== 'UPGRADE')
+                );
+
+                if (membershipPlans.length > 0) {
+                    const mappedPlans = membershipPlans.map((p, index) => ({
+                        id: p.id,
+                        name: p.name,
+                        duration: p.durationLabel || `${Math.max(1, Math.round((p.durationInDays || 30) / 30))} Months`,
+                        originalPrice: p.discountPercentage > 0 
+                            ? Math.round(p.price / (1 - (p.discountPercentage / 100)))
+                            : p.price,
+                        discountedPrice: p.price,
+                        perMonth: Math.round((p.price || 999) / Math.max(1, (p.durationInDays || 30) / 30)),
+                        discount: p.discountPercentage || 0,
+                        badge: p.highlightTag || null,
+                        features: p.features ? p.features.split(',').map(f => f.trim()) : ["Direct Messaging", "Contact Views", "Priority Listing"],
+                        extraContacts: p.extraContacts || 20,
+                        extraContactPrice: p.extraContactPrice || 255,
+                        promotePrice: p.promotePrice || 339,
+                        contribution: 17,
+                        icon: index === 0 ? (
+                            <Navigation size={28} className="text-[#1a56db] fill-[#1a56db]" />
+                        ) : index === 1 ? (
+                            <Sparkles size={28} className="text-[#eab308]" />
+                        ) : (
+                            <Crown size={28} className="text-[#0d9488] fill-[#0d9488]" />
+                        ),
+                        design: index === 0 ? {
+                            bg: "bg-gradient-to-b from-[#eff6ff] to-white border-[#dbeafe]",
+                            textMain: "text-[#1a56db]",
+                            badgeBg: "bg-[#dbeafe] text-[#1a56db]",
+                            btnBg: "bg-[#1a56db] hover:bg-[#1e40af] text-white",
+                            checkBg: "bg-[#1a56db]",
+                            ribbon: null
+                        } : index === 1 ? {
+                            bg: "bg-gradient-to-b from-[#fefce8] to-white border-[#fef08a]",
+                            textMain: "text-[#eab308]",
+                            badgeBg: "bg-[#fef08a] text-[#ca8a04]",
+                            btnBg: "bg-[#eab308] hover:bg-[#ca8a04] text-white",
+                            checkBg: "bg-[#eab308]",
+                            ribbon: "TOP SELLER",
+                            ribbonBg: "bg-[#eab308]"
+                        } : {
+                            bg: "bg-gradient-to-b from-[#f0fdfa] to-white border-[#ccfbf1]",
+                            textMain: "text-[#0d9488]",
+                            badgeBg: "bg-[#ccfbf1] text-[#0d9488]",
+                            btnBg: "bg-[#0d9488] hover:bg-[#0f766e] text-white",
+                            checkBg: "bg-[#0d9488]",
+                            ribbon: "BEST VALUE",
+                            ribbonBg: "bg-[#0d9488]"
+                        }
+                    }));
+                    setPlans(mappedPlans);
+                } else {
+                    setPlans(DEFAULT_MEMBERSHIP_PLANS);
+                }
+            } else {
+                setPlans(DEFAULT_MEMBERSHIP_PLANS);
             }
             setLoading(false);
         } catch (error) {
             console.error('Error fetching plans:', error);
+            setPlans(DEFAULT_MEMBERSHIP_PLANS);
             setLoading(false);
         }
     };
@@ -126,7 +215,6 @@ import {
         if (!selectedPlan) return 0;
         return selectedPlan.originalPrice - selectedPlan.discountedPrice;
     };
-
 
     const handlPayment = async () => {
         try {
@@ -189,6 +277,7 @@ import {
     };
 
     if (loading) return <div className="min-h-[60vh] flex items-center justify-center bg-transparent text-teal-600 font-bold">Loading Subscription Plans...</div>;
+
     return (
         <div className="w-full bg-transparent font-sans min-h-screen">
             <div className="max-w-7xl mx-auto flex flex-col px-4 sm:px-6 lg:px-8 pb-6 pt-0">
@@ -327,7 +416,7 @@ import {
                     </p>
                 </div>
 
-                {/* Modal (Redesigned) */}
+                {/* Modal */}
                 {showModal && selectedPlan && createPortal(
                     <div className="fixed inset-0 bg-[#3B2F2F]/40 backdrop-blur-sm flex items-center justify-center z-[99999] p-4" onClick={(e) => { if(e.target === e.currentTarget) setShowModal(false) }}>
                         <div className="bg-white/95 backdrop-blur-2xl rounded-[2.5rem] shadow-[0_20px_60px_rgba(0,0,0,0.15)] w-full max-w-lg max-h-[90vh] flex flex-col border border-white/60 animate-slideUp overflow-hidden" onClick={e => e.stopPropagation()}>

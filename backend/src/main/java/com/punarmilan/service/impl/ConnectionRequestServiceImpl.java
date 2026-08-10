@@ -249,15 +249,30 @@ public class ConnectionRequestServiceImpl implements ConnectionRequestService {
     }
 
     private ConnectionRequestDTO mapToDTO(ConnectionRequest request, User viewer) {
-        ProfileDTO senderProfile = profileService.getProfileByUserId(request.getSender().getId(), viewer);
-        ProfileDTO receiverProfile = profileService.getProfileByUserId(request.getReceiver().getId(), viewer);
+        ProfileDTO senderProfile = null;
+        try {
+            if (request.getSender() != null) {
+                senderProfile = profileService.getProfileByUserId(request.getSender().getId(), viewer);
+            }
+        } catch (Exception e) {
+            log.warn("Could not load sender profile for request {}: {}", request.getId(), e.getMessage());
+        }
+
+        ProfileDTO receiverProfile = null;
+        try {
+            if (request.getReceiver() != null) {
+                receiverProfile = profileService.getProfileByUserId(request.getReceiver().getId(), viewer);
+            }
+        } catch (Exception e) {
+            log.warn("Could not load receiver profile for request {}: {}", request.getId(), e.getMessage());
+        }
 
         return ConnectionRequestDTO.builder()
                 .id(request.getId())
                 .senderProfile(senderProfile)
                 .receiverProfile(receiverProfile)
-                .senderId(request.getSender().getId())
-                .receiverId(request.getReceiver().getId())
+                .senderId(request.getSender() != null ? request.getSender().getId() : null)
+                .receiverId(request.getReceiver() != null ? request.getReceiver().getId() : null)
                 .senderProfileId(senderProfile != null ? senderProfile.getId() : null)
                 .receiverProfileId(receiverProfile != null ? receiverProfile.getId() : null)
                 .status(request.getStatus())

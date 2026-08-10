@@ -5,13 +5,15 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
 import java.util.List;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class PreferenceMatchDTO {
+public class PreferenceMatchDTO implements Serializable {
+    private static final long serialVersionUID = 1L;
     private int totalPreferences;
     private int matchedCount;
     private double matchPercentage;
@@ -21,7 +23,8 @@ public class PreferenceMatchDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     @Builder
-    public static class FieldMatchStatus {
+    public static class FieldMatchStatus implements Serializable {
+        private static final long serialVersionUID = 1L;
         private String fieldLabel;
         private String prefValue;
         private String actualValue;

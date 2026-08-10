@@ -54,8 +54,61 @@ const IMAGE_PROPERTIES = [
     // Other image fields
     'thumbnailUrl', 'coverPhotoUrl', 'idProofUrl', 'bannerUrl', 'avatarUrl', 'imageUrl',
 ];
-const LIVE_URL = BASE_URL.replace(/\/api\/?$/, '');
-const LIVE_MINIO_URL = LIVE_URL ? `${LIVE_URL}/minio/` : '/minio/';
+const PHOTO_PUBLIC_BASE = 'https://api.lovenzea.online/minio';
+
+const normalizeUrl = (val) => {
+    if (!val || typeof val !== 'string') return val;
+    const clean = val.trim();
+    if (!clean) return val;
+
+    // External third-party avatars/images
+    if (clean.startsWith('data:') || clean.startsWith('blob:')) return clean;
+    if (clean.includes('unsplash.com') || clean.includes('dicebear.com') || clean.includes('ui-avatars.com') || clean.includes('flaticon.com') || clean.includes('githubusercontent.com')) {
+        return clean;
+    }
+
+    // Already the canonical public URL
+    if (clean.startsWith(`${PHOTO_PUBLIC_BASE}/`)) {
+        return clean.replace(`${PHOTO_PUBLIC_BASE}/punarmilan-photos/`, `${PHOTO_PUBLIC_BASE}/`)
+                    .replace(`${PHOTO_PUBLIC_BASE}/lovenzea-photos/`, `${PHOTO_PUBLIC_BASE}/`);
+    }
+
+    // Internal MinIO URLs — strip host and bucket prefix
+    const minioMatch = clean.match(/^https?:\/\/(?:localhost|127\.0\.0\.1|minio):9000\/(?:punarmilan|lovenzea)-photos\/(.*)/);
+    if (minioMatch) {
+        return `${PHOTO_PUBLIC_BASE}/${minioMatch[1]}`;
+    }
+
+    // Old domains / prefixes
+    const oldDomainMatch = clean.match(/^https?:\/\/(?:(?:www\.)?lovenzea\.online|(?:www\.)?app\.lovenzea\.online|(?:www\.)?api\.lovenzea\.online)\/(?:api\/photos|minio|photos)\/(.*)/);
+    if (oldDomainMatch) {
+        const path = oldDomainMatch[1].replace(/^(?:punarmilan-photos|lovenzea-photos)\//, '');
+        return `${PHOTO_PUBLIC_BASE}/${path}`;
+    }
+
+    // Relative /minio/, /api/photos/, /photos/
+    if (clean.startsWith('/minio/')) {
+        const path = clean.replace(/^\/minio\//, '').replace(/^(?:punarmilan-photos|lovenzea-photos)\//, '');
+        return `${PHOTO_PUBLIC_BASE}/${path}`;
+    }
+    if (clean.startsWith('/api/photos/')) {
+        const path = clean.replace(/^\/api\/photos\//, '').replace(/^(?:punarmilan-photos|lovenzea-photos)\//, '');
+        return `${PHOTO_PUBLIC_BASE}/${path}`;
+    }
+    if (clean.startsWith('/photos/')) {
+        const path = clean.replace(/^\/photos\//, '').replace(/^(?:punarmilan-photos|lovenzea-photos)\//, '');
+        return `${PHOTO_PUBLIC_BASE}/${path}`;
+    }
+
+    // Any other absolute URL
+    if (clean.startsWith('http://') || clean.startsWith('https://')) {
+        return clean;
+    }
+
+    // Plain object path
+    const cleanObject = clean.startsWith('/') ? clean.substring(1) : clean;
+    return `${PHOTO_PUBLIC_BASE}/${cleanObject}`;
+};
 
 const formatImageUrls = (obj) => {
     if (!obj || typeof obj !== 'object') return;
@@ -67,17 +120,7 @@ const formatImageUrls = (obj) => {
     
     Object.keys(obj).forEach(key => {
         if (IMAGE_PROPERTIES.includes(key) && typeof obj[key] === 'string') {
-            if (obj[key] && !obj[key].startsWith('http') && !obj[key].startsWith('data:')) {
-                const cleanPath = obj[key].startsWith('/') ? obj[key] : `/${obj[key]}`;
-                obj[key] = `${LIVE_URL}${cleanPath}`;
-            } else if (obj[key] && obj[key].startsWith('http')) {
-                obj[key] = obj[key]
-                    .replace('http://localhost:9000/', LIVE_MINIO_URL)
-                    .replace('http://127.0.0.1:9000/', LIVE_MINIO_URL)
-                    .replace('http://minio:9000/', LIVE_MINIO_URL)
-                    .replace('/punarmilan-photos/punarmilan-photos/', '/punarmilan-photos/')
-                    .split('?')[0];
-            }
+            obj[key] = normalizeUrl(obj[key]);
         } else if (typeof obj[key] === 'object') {
             formatImageUrls(obj[key]);
         }

@@ -42,26 +42,34 @@ public class AuthController {
     @org.springframework.beans.factory.annotation.Value("${server.ssl.enabled:false}")
     private boolean sslEnabled;
 
+    @org.springframework.beans.factory.annotation.Value("${app.cookie.secure:false}")
+    private boolean secureCookie;
+
+    @org.springframework.beans.factory.annotation.Value("${app.cookie.same-site:Lax}")
+    private String cookieSameSite;
+
     private boolean isSecureCookie() {
-        // Only set Secure flag when SSL is actually enabled (production)
-        // On localhost HTTP, Secure cookies are silently dropped by browsers
-        return sslEnabled;
+        return sslEnabled || secureCookie;
+    }
+
+    private String getCookieSameSite() {
+        return cookieSameSite == null || cookieSameSite.isBlank() ? "Lax" : cookieSameSite;
+    }
+
+    private void addAuthCookie(HttpServletResponse response, String name, String value, long maxAgeSeconds) {
+        ResponseCookie cookie = ResponseCookie.from(name, value == null ? "" : value)
+                .path("/")
+                .httpOnly(true)
+                .secure(isSecureCookie())
+                .sameSite(getCookieSameSite())
+                .maxAge(maxAgeSeconds)
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 
     private void setTokenCookies(HttpServletResponse response, String accessToken, String refreshToken) {
-        Cookie accessCookie = new Cookie("accessToken", accessToken);
-        accessCookie.setHttpOnly(true);
-        accessCookie.setSecure(isSecureCookie());
-        accessCookie.setPath("/");
-        accessCookie.setMaxAge(24 * 60 * 60); // 24 hours (was: 15 mins)
-        response.addCookie(accessCookie);
-
-        Cookie refreshCookie = new Cookie("refreshToken", refreshToken);
-        refreshCookie.setHttpOnly(true);
-        refreshCookie.setSecure(isSecureCookie());
-        refreshCookie.setPath("/");
-        refreshCookie.setMaxAge(7 * 24 * 60 * 60); // 7 days
-        response.addCookie(refreshCookie);
+        addAuthCookie(response, "accessToken", accessToken, 24 * 60 * 60);
+        addAuthCookie(response, "refreshToken", refreshToken, 7 * 24 * 60 * 60);
     }
 
     @PostMapping("/register")
@@ -119,12 +127,7 @@ public class AuthController {
         TokenRefreshResponse authResponse = authService.refreshToken(refreshRequest);
 
         // Set the new access token as a cookie
-        Cookie accessCookie = new Cookie("accessToken", authResponse.getAccessToken());
-        accessCookie.setHttpOnly(true);
-        accessCookie.setSecure(isSecureCookie());
-        accessCookie.setPath("/");
-        accessCookie.setMaxAge(24 * 60 * 60); // 24 hours (was: 15 mins)
-        response.addCookie(accessCookie);
+        addAuthCookie(response, "accessToken", authResponse.getAccessToken(), 24 * 60 * 60);
 
         return ResponseEntity.ok(authResponse);
     }
@@ -209,25 +212,7 @@ public class AuthController {
         try {
             UserResponse userResponse = authService.verifyLoginOtp(request);
             
-            // Set access token cookie
-            ResponseCookie jwtCookie = ResponseCookie.from("accessToken", userResponse.getAccessToken())
-                    .path("/")
-                    .httpOnly(true)
-                    .secure(true)
-                    .sameSite("Strict")
-                    .maxAge(24 * 60 * 60) // 24 hours
-                    .build();
-            response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
-
-            // Set refresh token cookie
-            ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", userResponse.getRefreshToken())
-                    .path("/")
-                    .httpOnly(true)
-                    .secure(true)
-                    .sameSite("Strict")
-                    .maxAge(7 * 24 * 60 * 60) // 7 days
-                    .build();
-            response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+            setTokenCookies(response, userResponse.getAccessToken(), userResponse.getRefreshToken());
 
             return ResponseEntity.ok(userResponse);
         } catch (IllegalArgumentException e) {
@@ -244,19 +229,8 @@ public class AuthController {
         authService.logout(email);
 
         // Clear cookies â€” must match the same flags used when setting them
-        Cookie accessCookie = new Cookie("accessToken", null);
-        accessCookie.setHttpOnly(true);
-        accessCookie.setSecure(true);
-        accessCookie.setPath("/");
-        accessCookie.setMaxAge(0);
-        response.addCookie(accessCookie);
-
-        Cookie refreshCookie = new Cookie("refreshToken", null);
-        refreshCookie.setHttpOnly(true);
-        refreshCookie.setSecure(true);
-        refreshCookie.setPath("/");
-        refreshCookie.setMaxAge(0);
-        response.addCookie(refreshCookie);
+        addAuthCookie(response, "accessToken", "", 0);
+        addAuthCookie(response, "refreshToken", "", 0);
 
         return ResponseEntity.ok(new MessageResponse("Logged out successfully"));
     }

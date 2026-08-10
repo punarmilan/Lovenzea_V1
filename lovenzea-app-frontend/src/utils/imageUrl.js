@@ -43,7 +43,7 @@ export const normalizePhotoUrl = (url) => {
 
   // ── 2–4. Internal MinIO URLs — strip the bucket prefix ──────────────────
   const minioInternalPattern =
-    /^https?:\/\/(?:localhost|127\.0\.0\.1|minio):9000\/punarmilan-photos\/(.*)/;
+    /^https?:\/\/(?:localhost|127\.0\.0\.1|minio):9000\/(?:punarmilan|lovenzea)-photos\/(.*)/;
   const minioMatch = clean.match(minioInternalPattern);
   if (minioMatch) {
     const objectAndQuery = minioMatch[1]; // preserves query string

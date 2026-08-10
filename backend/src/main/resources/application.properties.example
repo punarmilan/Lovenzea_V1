@@ -1,25 +1,27 @@
-spring.config.import=optional:file:.env.example[.properties]
+spring.config.import=optional:file:.env[.properties]
 
-spring.profiles.active=local
+spring.profiles.active=prod
 management.health.mail.enabled=false
 
-
-logging.level.org.hibernate.SQL=DEBUG
-logging.level.org.hibernate.type.descriptor.sql.BasicBinder=TRACE
-logging.level.org.springframework.transaction=TRACE
-logging.level.org.hibernate.transaction=TRACE
+logging.level.org.hibernate.SQL=INFO
+logging.level.org.springframework.transaction=INFO
+logging.level.org.hibernate.transaction=INFO
 
 # Server Configuration
-server.port=8085
+server.port=8080
 server.tomcat.threads.max=400
+
+# CORS Allowed Origins (WebSocket + HTTP)
+cors.allowed-origins=${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:5174,http://localhost:5175,https://lovenzea.com,https://www.lovenzea.com,https://lovenzea.in,https://www.lovenzea.in,https://lovenzea.online,https://www.lovenzea.online,https://asp-admin.lovenzea.online}
+
 # Master Database Configuration (Write)
-spring.datasource.master.url=${SPRING_DATASOURCE_MASTER_URL:jdbc:mysql://localhost:3306/lovenzeaNative_db?createDatabaseIfNotExist=true}
+spring.datasource.master.url=${SPRING_DATASOURCE_MASTER_URL:jdbc:mysql://localhost:3306/lovenzea_db?createDatabaseIfNotExist=true}
 spring.datasource.master.username=${DB_USERNAME:root}
 spring.datasource.master.password=${DB_PASSWORD}
 spring.datasource.master.driver-class-name=com.mysql.cj.jdbc.Driver
 
 # Replica Database Configuration (Read)
-spring.datasource.replica.url=${SPRING_DATASOURCE_REPLICA_URL:jdbc:mysql://localhost:3306/lovenzeaNative_db?createDatabaseIfNotExist=true}
+spring.datasource.replica.url=${SPRING_DATASOURCE_REPLICA_URL:jdbc:mysql://localhost:3306/lovenzea_db?createDatabaseIfNotExist=true}
 spring.datasource.replica.username=${DB_USERNAME:root}
 spring.datasource.replica.password=${DB_PASSWORD}
 spring.datasource.replica.driver-class-name=com.mysql.cj.jdbc.Driver
@@ -41,13 +43,15 @@ spring.jpa.open-in-view=false
 # Logging
 logging.level.org.springframework.web=${LOG_LEVEL_WEB:INFO}
 logging.level.com.punarmilan=${LOG_LEVEL_APP:INFO}
-logging.file.name=logs/punarmilan-backend.log
+logging.file.name=logs/lovenzea-backend.log
 
 # MinIO Configuration
 minio.url=${MINIO_URL:http://localhost:9000}
 minio.access-key=${MINIO_ACCESS_KEY}
 minio.secret-key=${MINIO_SECRET_KEY}
-minio.bucket-name=${MINIO_BUCKET_NAME:punarmilan-photos}
+minio.bucket-name=${MINIO_BUCKET_NAME:lovenzea-photos}
+minio.public-url=${MINIO_PUBLIC_URL:}
+minio.enabled=${MINIO_ENABLED:true}
 minio.expiry=7
 
 # JWT Configuration
@@ -61,18 +65,20 @@ spring.servlet.multipart.max-file-size=15MB
 spring.servlet.multipart.max-request-size=15MB
 
 # Email Configuration
-punarmilan.mail.from-name=${MAIL_FROM_NAME:PunarMilan}
+punarmilan.mail.from-name=${MAIL_FROM_NAME:LovenZea}
 
 # Email Configuration
 spring.mail.host=smtp.gmail.com
 spring.mail.port=587
-spring.mail.username=punarmilan2@gmail.com
-spring.mail.password=shggavvwackzsyba
-app.frontend-url=${FRONTEND_URL:http://localhost:5173}
+spring.mail.username=${SPRING_MAIL_USERNAME}
+spring.mail.password=${SPRING_MAIL_PASSWORD}
+app.frontend-url=${FRONTEND_URL:https://lovenzea.com}
+app.cookie.secure=${APP_COOKIE_SECURE:false}
+app.cookie.same-site=${APP_COOKIE_SAME_SITE:Lax}
 spring.mail.properties.mail.smtp.auth=true
 spring.mail.properties.mail.smtp.starttls.enable=true
 spring.mail.properties.mail.smtp.starttls.required=true
-spring.mail.properties.mail.debug=true
+spring.mail.properties.mail.debug=false
 
 # Razorpay Configuration
 razorpay.key.id=${RAZORPAY_KEY_ID}
@@ -102,11 +108,11 @@ match.weight.smokingDrinking=5
 
 # SMS Configuration
 sms.api.url=${SMS_API_URL:http://trans.dreamztechnolgy.org/smsstatuswithid.aspx}
-sms.api.key=${SMS_API_KEY:76bda706af0d42b5a7ea8a615567ad4f}
-sms.username=${SMS_USERNAME:9923400506}
-sms.password=${SMS_PASSWORD:WorknAi@2}
-sms.sender.id=${SMS_SENDER_ID:WRKTIP}
-sms.template.id=${SMS_TEMPLATE_ID:1707178341887596452}
+sms.api.key=${SMS_API_KEY}
+sms.username=${SMS_USERNAME}
+sms.password=${SMS_PASSWORD}
+sms.sender.id=${SMS_SENDER_ID}
+sms.template.id=${SMS_TEMPLATE_ID}
 match.weight.religion=20
 match.weight.location=15
 match.weight.education=15

@@ -8,7 +8,7 @@
 		<version>3.5.10</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.punarmilan</groupId>
+	<groupId>com.lovenzea</groupId>
 	<artifactId>lovenzea-backend</artifactId>
 	<version>1.0.0</version>
 	<name>lovenzea-backend</name>

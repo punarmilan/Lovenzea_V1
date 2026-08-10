@@ -8,6 +8,13 @@ RUN mvn dependency:go-offline -B
 
 # Build application
 COPY src ./src
+
+# Generate application.properties from example if not present
+# (the .gitignore excludes it for security, but the app needs it)
+RUN if [ ! -f src/main/resources/application.properties ]; then \
+      cp src/main/resources/application.properties.example src/main/resources/application.properties; \
+    fi
+
 RUN mvn clean package -DskipTests
 
 # Run stage

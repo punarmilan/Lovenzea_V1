@@ -26,7 +26,7 @@ public class MinioServiceImpl implements MinioService {
 
     private final MinioClient minioClient;
 
-    @Value("${minio.bucket-name:punarmilan-photos}")
+    @Value("${minio.bucket-name:lovenzea-photos}")
     private String bucketName;
 
     @Value("${minio.public-url:}")
@@ -105,6 +105,26 @@ public class MinioServiceImpl implements MinioService {
                 log.warn("Failed to parse legacy URL for presigned generation: {}", objectName);
             }
         }
+        if (actualObject.startsWith("http://") || actualObject.startsWith("https://")) {
+            String cleanUrl = actualObject.contains("?")
+                    ? actualObject.substring(0, actualObject.indexOf("?"))
+                    : actualObject;
+            int apiPhotosIndex = cleanUrl.indexOf("/api/photos/");
+            int minioIndex = cleanUrl.indexOf("/minio/");
+
+            if (apiPhotosIndex >= 0) {
+                actualObject = cleanUrl.substring(apiPhotosIndex + "/api/photos/".length());
+            } else if (minioIndex >= 0) {
+                actualObject = cleanUrl.substring(minioIndex + "/minio/".length());
+            } else {
+                return objectName;
+            }
+        }
+        if (actualObject.startsWith("/api/photos/")) {
+            actualObject = actualObject.substring("/api/photos/".length());
+        } else if (actualObject.startsWith("/minio/")) {
+            actualObject = actualObject.substring("/minio/".length());
+        }
 
         if (!minioEnabled) {
             try {
@@ -116,6 +136,11 @@ public class MinioServiceImpl implements MinioService {
             } catch (Exception e) {
                 return "http://localhost:8085/uploads/" + actualObject;
             }
+        }
+
+        if (publicUrl != null && !publicUrl.isEmpty()) {
+            String targetUrl = publicUrl.endsWith("/") ? publicUrl.substring(0, publicUrl.length() - 1) : publicUrl;
+            return targetUrl + "/" + actualObject;
         }
 
         try {

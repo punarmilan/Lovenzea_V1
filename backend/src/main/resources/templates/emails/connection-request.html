@@ -72,11 +72,11 @@
                 style="font-style: italic; background-color: #f5f5f5; padding: 10px; border-left: 4px solid #e91e63;">
                 "<span th:text="${message}">Message from sender</span>"
             </p>
-            <a href="http://localhost:5173/my-shadi/inbox/pending" class="button">View Request</a>
+            <a th:href="${frontendUrl + '/my-shadi/inbox/pending'}" href="https://lovenzea.com/my-shadi/inbox/pending" class="button">View Request</a>
         </div>
         <div class="footer">
             <p>&copy; 2026 PunarMilan Matrimonial Services. All rights reserved.</p>
-            <p>To stop receiving these emails, <a href="http://localhost:5173/settings/alerts">Manage Settings</a></p>
+            <p>To stop receiving these emails, <a th:href="${frontendUrl + '/settings/alerts'}" href="https://lovenzea.com/settings/alerts">Manage Settings</a></p>
         </div>
     </div>
 </body>

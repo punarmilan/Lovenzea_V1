@@ -1,4 +1,4 @@
-name: Build & Deploy Backend to VPS
+name: Build & Deploy LovenZea Stack
 
 on:
   push:
@@ -7,11 +7,17 @@ on:
       - master
   workflow_dispatch:
 
-jobs:
-  build-and-push-backend:
-    name: Build & Push Backend Docker Image
-    runs-on: ubuntu-latest
+env:
+  DEPLOY_DIR: /var/www/lovenzea_v1
+  COMPOSE_PROJECT_NAME: lovenzea
 
+jobs:
+  # ============================================================
+  # JOB 1: Build & Push Backend Docker Image
+  # ============================================================
+  build-backend:
+    name: Build & Push Backend
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -32,12 +38,79 @@ jobs:
           file: ./backend/Dockerfile
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/punarmilan-backend:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/punarmilan-backend:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/lovenzea-backend:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/lovenzea-backend:${{ github.sha }}
 
-  deploy-backend:
-    name: Deploy Backend to VPS
-    needs: build-and-push-backend
+  # ============================================================
+  # JOB 2: Build & Push Web Frontend (lovenzea.com/.in/.online)
+  # ============================================================
+  build-web-frontend:
+    name: Build & Push Web Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push Web Frontend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./lovenzea-web-frontend
+          file: ./lovenzea-web-frontend/Dockerfile
+          push: true
+          build-args: |
+            VITE_API_URL=https://api.lovenzea.online/api
+            VITE_WS_URL=wss://api.lovenzea.online/ws
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/lovenzea-web-frontend:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/lovenzea-web-frontend:${{ github.sha }}
+
+  # ============================================================
+  # JOB 3: Build & Push Admin Frontend (asp-admin.lovenzea.online)
+  # ============================================================
+  build-admin-frontend:
+    name: Build & Push Admin Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push Admin Frontend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./lovenzea-admin-frontend
+          file: ./lovenzea-admin-frontend/Dockerfile
+          push: true
+          build-args: |
+            VITE_API_URL=https://api.lovenzea.online/api
+            VITE_WS_URL=wss://api.lovenzea.online/ws
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/lovenzea-admin-frontend:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/lovenzea-admin-frontend:${{ github.sha }}
+
+  # ============================================================
+  # JOB 4: Deploy All Services to VPS
+  # ============================================================
+  deploy-all:
+    name: Deploy Full Stack to VPS
+    needs: [build-backend, build-web-frontend, build-admin-frontend]
     runs-on: ubuntu-latest
 
     steps:
@@ -45,42 +118,139 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         env:
           ENV_FILE: ${{ secrets.ENV_FILE }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DEPLOY_DIR: ${{ env.DEPLOY_DIR }}
+          DEPLOY_BRANCH: ${{ github.ref_name }}
         with:
           host: ${{ secrets.VPS_HOST }}
+          port: ${{ secrets.VPS_PORT || '22' }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           password: ${{ secrets.VPS_PASSWORD }}
-          envs: ENV_FILE
+          timeout: 90s
+          command_timeout: 30m
+          script_stop: true
+          envs: ENV_FILE, DOCKERHUB_USERNAME, DEPLOY_DIR, DEPLOY_BRANCH
           script: |
             set -e
-            echo "--- Preparing deployment directory ---"
-            mkdir -p /var/www/punarmilan/source
-            cd /var/www/punarmilan/source
+            export DOCKERHUB_USERNAME="${DOCKERHUB_USERNAME:-worknai009}"
+            export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-lovenzea}"
+            export DEPLOY_DIR="${DEPLOY_DIR:-/var/www/lovenzea_v1}"
+            export DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
+            export REPO_URL="https://github.com/punarmilan/Lovenzea_V1.git"
 
-            if [ ! -d ".git" ]; then
-              echo "Repository not found locally, cloning..."
-              git clone https://github.com/punarmilan/LovenZea_Native_App.git .
-            else
-              echo "Pulling latest code from origin..."
-              git fetch origin main || git fetch origin master
-              git reset --hard origin/$(git rev-parse --abbrev-ref HEAD)
+            echo "--- Preparing deployment directory ---"
+            echo "Deploy target: $DEPLOY_DIR"
+            echo "Deploy branch: $DEPLOY_BRANCH"
+            mkdir -p "$DEPLOY_DIR"
+            cd "$DEPLOY_DIR"
+            if [ "$(pwd -P)" != "$(realpath "$DEPLOY_DIR")" ]; then
+              echo "Refusing to deploy from unexpected directory: $(pwd -P)"
+              exit 1
             fi
+            echo "Working directory: $(pwd -P)"
+
+            if [ -d ".git" ]; then
+              echo "Pulling latest code from origin..."
+              git remote set-url origin "$REPO_URL" || true
+              if ! git fetch --prune origin "$DEPLOY_BRANCH"; then
+                echo "Git fetch failed. Current remote configuration:"
+                git remote -v || true
+                echo "Fix the checkout in $DEPLOY_DIR or move it aside manually, then rerun deployment."
+                exit 1
+              fi
+            else
+              if [ -n "$(ls -A . 2>/dev/null)" ]; then
+                echo "Deployment directory exists without .git: $DEPLOY_DIR"
+                echo "Move this directory aside manually or empty it, then rerun deployment."
+                exit 1
+              else
+                echo "Repository not found locally, cloning..."
+              fi
+              git clone --branch "$DEPLOY_BRANCH" "$REPO_URL" .
+            fi
+            git reset --hard "origin/$DEPLOY_BRANCH"
 
             if [ -n "$ENV_FILE" ]; then
               echo "--- Writing .env file from GitHub Secrets ---"
-              echo "$ENV_FILE" > .env
+              printf '%s\n' "$ENV_FILE" > .env
+              chmod 600 .env
+            else
+              echo "ENV_FILE GitHub secret is empty. Add production env values in GitHub Secrets."
+              exit 1
             fi
 
-            echo "--- Copying gateway configuration ---"
-            cp gateway.nginx.conf /var/www/punarmilan/gateway.nginx.conf 2>/dev/null || true
+            echo "--- Gateway configuration ready ---"
+            if [ "$(realpath gateway.nginx.conf)" != "$(realpath "$DEPLOY_DIR/gateway.nginx.conf")" ]; then
+              cp gateway.nginx.conf "$DEPLOY_DIR/gateway.nginx.conf"
+            fi
+
+            echo "--- Ensuring SSL certificates exist ---"
+            mkdir -p /var/www/certbot
+
+            if ! command -v certbot >/dev/null 2>&1; then
+              echo "certbot not found. Installing certbot..."
+              if command -v apt-get >/dev/null 2>&1; then
+                if [ "$(id -u)" -eq 0 ]; then
+                  apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y certbot
+                else
+                  sudo -n apt-get update && sudo -n env DEBIAN_FRONTEND=noninteractive apt-get install -y certbot
+                fi
+              else
+                echo "certbot is required but could not be installed automatically."
+                exit 1
+              fi
+            fi
+
+            ensure_cert() {
+              cert_name="$1"
+              shift
+              common_args="--non-interactive --agree-tos --register-unsafely-without-email --keep-until-expiring --expand --cert-name $cert_name"
+
+              if docker ps --format '{{.Names}}' | grep -qx 'lovenzea-gateway'; then
+                certbot certonly --webroot -w /var/www/certbot $common_args "$@" || {
+                  docker stop lovenzea-gateway || true
+                  certbot certonly --standalone --preferred-challenges http $common_args "$@"
+                }
+              else
+                docker rm -f lovenzea-gateway 2>/dev/null || true
+                certbot certonly --standalone --preferred-challenges http $common_args "$@" || \
+                  certbot certonly --webroot -w /var/www/certbot $common_args "$@"
+              fi
+            }
+
+            ensure_cert lovenzea.com \
+              -d lovenzea.com -d www.lovenzea.com \
+              -d lovenzea.in -d www.lovenzea.in \
+              -d lovenzea.online -d www.lovenzea.online
+            ensure_cert api.lovenzea.online -d api.lovenzea.online
+            ensure_cert asp-admin.lovenzea.online -d asp-admin.lovenzea.online
+
+            echo "--- Validating Nginx config ---"
+            docker exec lovenzea-gateway nginx -t 2>/dev/null || true
 
             echo "--- Pulling latest Docker images ---"
-            docker compose pull backend
+            docker login -u "$DOCKERHUB_USERNAME" -p "${{ secrets.DOCKERHUB_TOKEN }}"
+            docker compose pull backend web-frontend admin-frontend
+
+            echo "--- Cleaning up old containers from previous projects ---"
+            docker rm -f punarmilan-backend punarmilan-frontend punarmilan-login-server punarmilan-gateway punarmilan-mysql punarmilan-redis punarmilan-rabbitmq punarmilan-minio punarmilan-minio-config punarmilan-watchtower truth-life-frontend 2>/dev/null || true
+            docker rm -f lovenzea-watchtower lovenzea-gateway lovenzea-backend lovenzea-web-frontend lovenzea-admin-frontend lovenzea-mysql lovenzea-redis lovenzea-rabbitmq lovenzea-minio lovenzea-minio-config 2>/dev/null || true
 
             echo "--- Deploying Docker Compose services ---"
-            docker compose up -d --remove-orphans
+            docker compose up -d --remove-orphans || {
+              echo "--- Deployment failed, showing backend logs ---"
+              docker logs lovenzea-backend --tail 100 2>&1 || true
+              echo "--- Backend container status ---"
+              docker inspect lovenzea-backend --format='{{.State.Status}} {{.State.Health.Status}}' 2>&1 || true
+              exit 1
+            }
+
+            echo "--- Reloading Nginx Gateway ---"
+            docker exec lovenzea-gateway nginx -s reload 2>/dev/null || true
 
             echo "--- Cleaning up unused images ---"
             docker image prune -f
 
-            echo "--- Backend Deployment Complete ---"
+            echo "--- Deployment Complete ---"
+            docker compose ps

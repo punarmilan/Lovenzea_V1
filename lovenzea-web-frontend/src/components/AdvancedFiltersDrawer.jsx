@@ -208,7 +208,7 @@ const AdvancedFiltersDrawer = ({
             </div>
             
             {/* Styles for animation */}
-            <style jsx>{`
+            <style>{`
                 @keyframes slide-left {
                     from { transform: translateX(100%); }
                     to { transform: translateX(0); }

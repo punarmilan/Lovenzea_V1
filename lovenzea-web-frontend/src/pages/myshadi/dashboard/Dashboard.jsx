@@ -19,69 +19,6 @@ import api from '../../../services/api'
 import { toast } from 'react-hot-toast'
 import layoutBg from '../../../assets/image/sunny-floral-path.png'
 
-const dummyNewMatches = [
-  {
-    id: 1,
-    name: "Julia Ann",
-    city: "New York",
-    age: 22,
-    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=60",
-    online: true,
-    occupation: "Software Engineer",
-    education: "Master's Degree",
-    height: "5'4\"",
-    religion: "Christian"
-  },
-  {
-    id: 2,
-    name: "Aria Montgomery",
-    city: "Boston",
-    age: 24,
-    image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=60",
-    online: true,
-    occupation: "Fashion Journalist",
-    education: "Bachelor of Arts",
-    height: "5'5\"",
-    religion: "Hindu"
-  },
-  {
-    id: 3,
-    name: "Serena van der Woodsen",
-    city: "Los Angeles",
-    age: 23,
-    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=60",
-    online: false,
-    occupation: "Public Relations Specialist",
-    education: "Undergraduate",
-    height: "5'8\"",
-    religion: "Jewish"
-  },
-  {
-    id: 4,
-    name: "Elena Gilbert",
-    city: "Chicago",
-    age: 21,
-    image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=60",
-    online: true,
-    occupation: "Medical Resident",
-    education: "Pre-Med",
-    height: "5'6\"",
-    religion: "Orthodox"
-  },
-  {
-    id: 5,
-    name: "Rachel Green",
-    city: "San Francisco",
-    age: 25,
-    image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&auto=format&fit=crop&q=60",
-    online: false,
-    occupation: "Buying Manager",
-    education: "Associate Degree",
-    height: "5'4\"",
-    religion: "Sikh"
-  }
-];
-
 function Dashboard() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -110,7 +47,6 @@ function Dashboard() {
         const fetchSentConnections = async () => {
             try {
                 const response = await api.get('/connections/sent');
-                // The receiverProfile or receiverProfileId tells us who we sent an interest to
                 const sentIds = new Set(response.data.map(conn => conn.receiverProfile?.id || conn.receiverProfileId));
                 setSentInterests(sentIds);
             } catch (error) {
@@ -120,8 +56,6 @@ function Dashboard() {
         fetchSentConnections();
     }, [dispatch]);
 
-    const [open, setOpen] = useState(false);
-
     const handleUpgradeNow = () => {
         navigate('/payment');
     };
@@ -130,25 +64,17 @@ function Dashboard() {
         "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=60",
         "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=60",
         "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=60",
-        "https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?w=150&auto=format&fit=crop&q=60",
-        "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=150&auto=format&fit=crop&q=60",
-        "https://images.unsplash.com/photo-1489980508314-941910ded1f4?w=150&auto=format&fit=crop&q=60",
-        "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=60",
-        "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=60"
+        "https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?w=150&auto=format&fit=crop&q=60"
     ];
 
     const FEMALE_AVATARS = [
         "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=60",
         "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=60",
         "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=60",
-        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=60",
-        "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&auto=format&fit=crop&q=60",
-        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=60",
-        "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=150&auto=format&fit=crop&q=60",
-        "https://images.unsplash.com/photo-1554151228-14d9def656e4?w=150&auto=format&fit=crop&q=60"
+        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=60"
     ];
 
-    const displayNewMatches = newMatches && newMatches.length > 0 
+    const displayNewMatches = Array.isArray(newMatches)
         ? newMatches.map(m => {
             const idVal = m.id || m.userId || 0;
             const isMale = (m.gender || 'female').toLowerCase() === 'male';
@@ -156,8 +82,8 @@ function Dashboard() {
                 ? MALE_AVATARS[idVal % MALE_AVATARS.length] 
                 : FEMALE_AVATARS[idVal % FEMALE_AVATARS.length];
             return {
-                id: m.id,
-                name: m.fullName || m.name,
+                id: m.id || m.userId,
+                name: m.fullName || m.name || 'Member',
                 city: m.city || m.state || "India",
                 age: m.age || 25,
                 image: m.profilePhotoUrl || m.image || fallbackAvatar,
@@ -168,7 +94,7 @@ function Dashboard() {
                 religion: m.religion || "Hindu"
             };
           })
-        : dummyNewMatches;
+        : [];
 
     return (
         <div className="relative w-full min-h-screen font-sans overflow-x-hidden text-[#4A3728] bg-transparent">
@@ -291,97 +217,107 @@ function Dashboard() {
                             </button>
                         </div>
                         
-                        <div className="relative group">
-                            {/* Left Arrow */}
-                            <button 
-                                className="absolute left-[-20px] top-[40%] -translate-y-1/2 w-10 h-10 bg-theme-surface rounded-full shadow-lg border border-[#F5E6D3] flex items-center justify-center text-theme-pink z-10 hover:bg-theme-bg transition-all hidden md:flex opacity-0 group-hover:opacity-100" 
-                                onClick={() => document.getElementById('matches-carousel').scrollBy({ left: -300, behavior: 'smooth' })}
-                            >
-                                <HiChevronLeft className="w-6 h-6" />
-                            </button>
+                        {displayNewMatches.length > 0 ? (
+                            <div className="relative group">
+                                {/* Left Arrow */}
+                                <button 
+                                    className="absolute left-[-20px] top-[40%] -translate-y-1/2 w-10 h-10 bg-theme-surface rounded-full shadow-lg border border-[#F5E6D3] flex items-center justify-center text-theme-pink z-10 hover:bg-theme-bg transition-all hidden md:flex opacity-0 group-hover:opacity-100" 
+                                    onClick={() => document.getElementById('matches-carousel').scrollBy({ left: -300, behavior: 'smooth' })}
+                                >
+                                    <HiChevronLeft className="w-6 h-6" />
+                                </button>
 
-                            {/* Scroll Container */}
-                            <div id="matches-carousel" className="flex overflow-x-auto gap-4 pb-6 pt-2 snap-x snap-mandatory no-scrollbar scroll-smooth px-1">
-                                {displayNewMatches.map((profile, idx) => (
-                                    <div 
-                                        key={profile.id}
-                                        onClick={() => navigate(`/matches/${profile.id}`)}
-                                        className="flex-shrink-0 w-[240px] snap-center bg-theme-surface rounded-[20px] border border-theme-border overflow-hidden shadow-[0_10px_30px_rgba(15,157,138,0.08)] hover:border-theme-border hover:shadow-[0_10px_30px_rgba(45,212,191,0.2)] hover:-translate-y-1.5 transition-all duration-300 cursor-pointer flex flex-col group/card"
-                                    >
-                                        {/* Top Image Section */}
-                                        <div className="relative w-full h-[190px] overflow-hidden">
-                                            <img 
-                                                src={profile.image} 
-                                                alt={profile.name} 
-                                                className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-500"
-                                            />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A]/80 via-transparent to-black/20" />
-                                            
-                                            {/* Tag */}
-                                            <div className={`absolute top-3 left-3 px-2.5 py-1 rounded-md text-[9px] uppercase tracking-wider font-extrabold text-white shadow-md backdrop-blur-sm ${idx % 4 === 1 ? 'bg-gradient-to-r from-[#F59E0B] to-[#D97706]' : 'bg-gradient-to-r from-[#10B981] to-[#059669]'}`}>
-                                                {idx % 4 === 1 ? 'Premium' : 'New'}
-                                            </div>
-                                            
-                                            {/* Heart icon top right */}
-                                            <button className="absolute top-3 right-3 text-white/90 hover:text-[#2DD4BF] hover:scale-110 transition-all duration-200 drop-shadow-md">
-                                                <HiOutlineHeart className="w-5 h-5" />
-                                            </button>
-
-                                            {/* Quick info overlaid on image bottom - REMOVED to match screenshot */}
-                                        </div>
-                                        
-                                        {/* Bottom Details Section */}
-                                        <div className="p-4 flex flex-col flex-1 relative bg-theme-surface rounded-t-[24px] -mt-5 z-10">
-                                            
-                                            <div className="flex items-center gap-1.5 mb-1">
-                                                <h3 className="font-bold text-theme-text text-base truncate">{profile.name}</h3>
-                                                <HiCheckCircle className="text-theme-primary w-4 h-4" />
-                                            </div>
-                                            <p className="text-[11px] text-[#64748B] font-medium mb-3">
-                                                {profile.age} yrs • {profile.height}
-                                            </p>
-                                            
-                                            <div className="space-y-2 mb-4">
-                                                <p className="text-[11px] text-theme-text-secondary flex items-center gap-2 font-medium">
-                                                    <span className="flex items-center justify-center w-5 h-5 rounded-full bg-theme-lavender text-theme-primary text-xs shadow-sm">📋</span> 
-                                                    <span className="truncate">{profile.religion} • {profile.education}</span>
-                                                </p>
-                                                <p className="text-[11px] text-theme-text-secondary flex items-center gap-2 font-medium">
-                                                    <span className="flex items-center justify-center w-5 h-5 rounded-full bg-theme-lavender text-theme-primary text-xs shadow-sm">📍</span> 
-                                                    <span className="truncate">Located in {profile.city}</span>
-                                                </p>
-                                            </div>
-
-                                            {/* Action Buttons */}
-                                            <div className="mt-auto flex items-center gap-2.5">
-                                                <button className="w-9 h-9 rounded-full border border-theme-border bg-theme-surface shadow-sm flex items-center justify-center text-theme-primary hover:bg-theme-lavender transition-all duration-200 flex-shrink-0 hover:scale-105">
-                                                    <HiOutlineHeart className="w-4 h-4" />
-                                                </button>
+                                {/* Scroll Container */}
+                                <div id="matches-carousel" className="flex overflow-x-auto gap-4 pb-6 pt-2 snap-x snap-mandatory no-scrollbar scroll-smooth px-1">
+                                    {displayNewMatches.map((profile, idx) => (
+                                        <div 
+                                            key={profile.id}
+                                            onClick={() => navigate(`/matches/${profile.id}`)}
+                                            className="flex-shrink-0 w-[240px] snap-center bg-theme-surface rounded-[20px] border border-theme-border overflow-hidden shadow-[0_10px_30px_rgba(15,157,138,0.08)] hover:border-theme-border hover:shadow-[0_10px_30px_rgba(45,212,191,0.2)] hover:-translate-y-1.5 transition-all duration-300 cursor-pointer flex flex-col group/card"
+                                        >
+                                            {/* Top Image Section */}
+                                            <div className="relative w-full h-[190px] overflow-hidden">
+                                                <img 
+                                                    src={profile.image} 
+                                                    alt={profile.name} 
+                                                    className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-500"
+                                                />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A]/80 via-transparent to-black/20" />
                                                 
-                                                {sentInterests.has(profile.id) ? (
-                                                    <button disabled className="flex-1 h-9 bg-gradient-to-r from-amber-400 to-amber-600 text-white rounded-full text-xs font-bold shadow-md cursor-not-allowed flex items-center justify-center gap-1">✓ Interest Sent</button>
-                                                ) : (
-                                                    <button 
-                                                        onClick={(e) => handleSendInterest(e, profile.id)}
-                                                        className="flex-1 h-9 bg-gradient-to-r from-[#E86D8A] to-[#D89A74] hover:opacity-90 text-white rounded-full text-xs font-bold shadow-md transition-all duration-300 hover:shadow-[0_4px_15px_rgba(216,154,116,0.3)] hover:-translate-y-0.5"
-                                                    >
-                                                        Send Interest
+                                                {/* Tag */}
+                                                <div className={`absolute top-3 left-3 px-2.5 py-1 rounded-md text-[9px] uppercase tracking-wider font-extrabold text-white shadow-md backdrop-blur-sm ${idx % 4 === 1 ? 'bg-gradient-to-r from-[#F59E0B] to-[#D97706]' : 'bg-gradient-to-r from-[#10B981] to-[#059669]'}`}>
+                                                    {idx % 4 === 1 ? 'Premium' : 'New'}
+                                                </div>
+                                                
+                                                {/* Heart icon top right */}
+                                                <button className="absolute top-3 right-3 text-white/90 hover:text-[#2DD4BF] hover:scale-110 transition-all duration-200 drop-shadow-md">
+                                                    <HiOutlineHeart className="w-5 h-5" />
+                                                </button>
+                                            </div>
+                                            
+                                            {/* Bottom Details Section */}
+                                            <div className="p-4 flex flex-col flex-1 relative bg-theme-surface rounded-t-[24px] -mt-5 z-10">
+                                                <div className="flex items-center gap-1.5 mb-1">
+                                                    <h3 className="font-bold text-theme-text text-base truncate">{profile.name}</h3>
+                                                    <HiCheckCircle className="text-theme-primary w-4 h-4" />
+                                                </div>
+                                                <p className="text-[11px] text-[#64748B] font-medium mb-3">
+                                                    {profile.age} yrs • {profile.height}
+                                                </p>
+                                                
+                                                <div className="space-y-2 mb-4">
+                                                    <p className="text-[11px] text-theme-text-secondary flex items-center gap-2 font-medium">
+                                                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-theme-lavender text-theme-primary text-xs shadow-sm">📋</span> 
+                                                        <span className="truncate">{profile.religion} • {profile.education}</span>
+                                                    </p>
+                                                    <p className="text-[11px] text-theme-text-secondary flex items-center gap-2 font-medium">
+                                                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-theme-lavender text-theme-primary text-xs shadow-sm">📍</span> 
+                                                        <span className="truncate">Located in {profile.city}</span>
+                                                    </p>
+                                                </div>
+
+                                                {/* Action Buttons */}
+                                                <div className="mt-auto flex items-center gap-2.5">
+                                                    <button className="w-9 h-9 rounded-full border border-theme-border bg-theme-surface shadow-sm flex items-center justify-center text-theme-primary hover:bg-theme-lavender transition-all duration-200 flex-shrink-0 hover:scale-105">
+                                                        <HiOutlineHeart className="w-4 h-4" />
                                                     </button>
-                                                )}
+                                                    
+                                                    {sentInterests.has(profile.id) ? (
+                                                        <button disabled className="flex-1 h-9 bg-gradient-to-r from-amber-400 to-amber-600 text-white rounded-full text-xs font-bold shadow-md cursor-not-allowed flex items-center justify-center gap-1">✓ Interest Sent</button>
+                                                    ) : (
+                                                        <button 
+                                                            onClick={(e) => handleSendInterest(e, profile.id)}
+                                                            className="flex-1 h-9 bg-gradient-to-r from-[#E86D8A] to-[#D89A74] hover:opacity-90 text-white rounded-full text-xs font-bold shadow-md transition-all duration-300 hover:shadow-[0_4px_15px_rgba(216,154,116,0.3)] hover:-translate-y-0.5"
+                                                        >
+                                                            Send Interest
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
 
-                            {/* Right Arrow */}
-                            <button 
-                                className="absolute right-[-20px] top-[40%] -translate-y-1/2 w-10 h-10 bg-theme-surface rounded-full shadow-lg border border-[#F5E6D3] flex items-center justify-center text-theme-pink z-10 hover:bg-theme-bg transition-all hidden md:flex opacity-0 group-hover:opacity-100" 
-                                onClick={() => document.getElementById('matches-carousel').scrollBy({ left: 300, behavior: 'smooth' })}
-                            >
-                                <HiChevronRight className="w-6 h-6" />
-                            </button>
-                        </div>
+                                {/* Right Arrow */}
+                                <button 
+                                    className="absolute right-[-20px] top-[40%] -translate-y-1/2 w-10 h-10 bg-theme-surface rounded-full shadow-lg border border-[#F5E6D3] flex items-center justify-center text-theme-pink z-10 hover:bg-theme-bg transition-all hidden md:flex opacity-0 group-hover:opacity-100" 
+                                    onClick={() => document.getElementById('matches-carousel').scrollBy({ left: 300, behavior: 'smooth' })}
+                                >
+                                    <HiChevronRight className="w-6 h-6" />
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="dashboard-card-bg rounded-[24px] border border-[#F2D7D9] p-8 text-center shadow-sm">
+                                <p className="text-sm font-semibold text-[#5A2332] mb-1">No new matches found right now</p>
+                                <p className="text-xs text-theme-text-secondary mb-4">As more members register matching your preferences, they will appear here automatically.</p>
+                                <button 
+                                    onClick={() => navigate('/matches')}
+                                    className="px-5 py-2 bg-gradient-to-r from-[#E86D8A] to-[#D89A74] text-white rounded-full text-xs font-bold shadow-sm hover:opacity-95 transition-opacity"
+                                >
+                                    Explore All Matches
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     {/* Interest Request section with tabs and Accept/Deny buttons */}
@@ -397,11 +333,6 @@ function Dashboard() {
                             
                             {/* Recent Conversations */}
                             <RecentChatsCard />
-
-                            {/* <div className="bg-theme-surface rounded-[24px] border border-theme-border shadow-[0_8px_30px_rgb(229,213,192,0.2)] p-6 hover:-translate-y-1 transition-all duration-300">
-                                <RecentVistiors />
-                            </div> */}
-
 
                         </div>
 
@@ -449,12 +380,6 @@ function Dashboard() {
                                     <HiArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                                 </button>
                             </div>
-
-                            {/* Events/Calendar Section */}
-                            {/* <div className="bg-theme-surface rounded-[24px] border border-theme-border shadow-[0_8px_30px_rgb(229,213,192,0.2)] p-6 hover:-translate-y-1 transition-all duration-300">
-                                <EventSection />
-                            </div> */}
-
 
                         </div>
 

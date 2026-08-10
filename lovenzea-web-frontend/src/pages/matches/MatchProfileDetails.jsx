@@ -233,7 +233,11 @@ const MatchProfileDetails = () => {
     useEffect(() => {
         if (id && !isNaN(id)) {
             setLoading(true);
-            dispatch(fetchProfileById(id));
+            dispatch(fetchProfileById(id))
+                .unwrap()
+                .catch(() => {
+                    setLoading(false);
+                });
             dispatch(fetchPreferenceMatch(id));
             dispatch(logProfileView(parseInt(id)));
         } else {

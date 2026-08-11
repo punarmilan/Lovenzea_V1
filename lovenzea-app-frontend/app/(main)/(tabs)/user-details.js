@@ -32,6 +32,8 @@ import {
   Phone,
   Mail,
   Map,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react-native';
 import api from '../../../src/services/api';
 import Toast from 'react-native-toast-message';
@@ -49,6 +51,9 @@ export default function UserDetails() {
   const [interestStatus, setInterestStatus] = useState(null);
   const [interestId, setInterestId] = useState(null);
   const [activeTab, setActiveTab] = useState('Personal');
+  const tabScrollRef = React.useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
 
   const TABS_LIST = ['Personal', 'Background', 'Family', 'Career', 'Lifestyle', 'Preferences', 'Location', 'Contact'];
 
@@ -60,9 +65,17 @@ export default function UserDetails() {
   const handleSwipe = (direction) => {
     const currentIndex = TABS_LIST.indexOf(activeTabRef.current);
     if (direction === 'LEFT' && currentIndex < TABS_LIST.length - 1) {
-      setActiveTab(TABS_LIST[currentIndex + 1]);
+      const nextTab = TABS_LIST[currentIndex + 1];
+      setActiveTab(nextTab);
+      if (tabScrollRef.current) {
+        tabScrollRef.current.scrollTo({ x: Math.max(0, (currentIndex + 1) * 80 - 60), animated: true });
+      }
     } else if (direction === 'RIGHT' && currentIndex > 0) {
-      setActiveTab(TABS_LIST[currentIndex - 1]);
+      const prevTab = TABS_LIST[currentIndex - 1];
+      setActiveTab(prevTab);
+      if (tabScrollRef.current) {
+        tabScrollRef.current.scrollTo({ x: Math.max(0, (currentIndex - 1) * 80 - 60), animated: true });
+      }
     }
   };
 
@@ -278,16 +291,45 @@ export default function UserDetails() {
             </View>
           </View>
 
-          {/* Tab Segment Selector Control */}
+          {/* Tab Segment Selector Control with Scroll Indicators */}
           <View style={styles.segmentContainer}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.segmentScroll}>
-              {TABS_LIST.map((tab) => {
+            {canScrollLeft && (
+              <TouchableOpacity 
+                style={[styles.tabArrowBtn, styles.tabArrowLeft]} 
+                onPress={() => {
+                  if (tabScrollRef.current) tabScrollRef.current.scrollTo({ x: 0, animated: true });
+                }}
+                activeOpacity={0.7}
+              >
+                <ChevronLeft size={11} color="#C9748A" strokeWidth={2.5} />
+              </TouchableOpacity>
+            )}
+
+            <ScrollView 
+              ref={tabScrollRef}
+              style={{ flex: 1 }}
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              contentContainerStyle={styles.segmentScroll}
+              onScroll={(e) => {
+                const { contentOffset, layoutMeasurement, contentSize } = e.nativeEvent;
+                setCanScrollLeft(contentOffset.x > 8);
+                setCanScrollRight(contentOffset.x < contentSize.width - layoutMeasurement.width - 8);
+              }}
+              scrollEventThrottle={16}
+            >
+              {TABS_LIST.map((tab, idx) => {
                 const isActive = activeTab === tab;
                 return (
                   <TouchableOpacity
                     key={tab}
                     style={[styles.segmentBtn, isActive && styles.segmentBtnActive]}
-                    onPress={() => setActiveTab(tab)}
+                    onPress={() => {
+                      setActiveTab(tab);
+                      if (tabScrollRef.current) {
+                        tabScrollRef.current.scrollTo({ x: Math.max(0, idx * 80 - 60), animated: true });
+                      }
+                    }}
                   >
                     <Text style={[styles.segmentText, isActive && styles.segmentTextActive]}>
                       {tab}
@@ -296,6 +338,18 @@ export default function UserDetails() {
                 );
               })}
             </ScrollView>
+
+            {canScrollRight && (
+              <TouchableOpacity 
+                style={[styles.tabArrowBtn, styles.tabArrowRight]} 
+                onPress={() => {
+                  if (tabScrollRef.current) tabScrollRef.current.scrollToEnd({ animated: true });
+                }}
+                activeOpacity={0.7}
+              >
+                <ChevronRight size={11} color="#C9748A" strokeWidth={2.5} />
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Tab Contents */}
@@ -647,12 +701,38 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     marginTop: 6,
     marginBottom: 16,
-    padding: 4,
+    paddingVertical: 5,
+    paddingHorizontal: 6,
     borderWidth: 1,
-    borderColor: '#777777',
+    borderColor: '#EEEEEE',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  tabArrowBtn: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#C9748A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 2,
+    zIndex: 10,
+    borderWidth: 1,
+    borderColor: '#F5E6EA',
+  },
+  tabArrowLeft: {
+    marginRight: 2,
+  },
+  tabArrowRight: {
+    marginLeft: 2,
   },
   segmentScroll: {
-    paddingHorizontal: 4,
+    paddingHorizontal: 8,
+    alignItems: 'center',
   },
   segmentBtn: {
     paddingHorizontal: 16,

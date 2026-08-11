@@ -194,4 +194,59 @@ export const uploadProfilePhotoApi = async (asset, index = 0, tokenOverride = nu
   return responseData;
 };
 
+export const uploadIdProofApi = async (asset, idProofType, idProofNumber) => {
+  const token = await AsyncStorage.getItem('userToken');
+  if (!token) throw new Error('No user token found');
+
+  const fileUri = asset.uri;
+  const fileName = asset.fileName || fileUri.split('/').pop() || `id-proof-${Date.now()}.jpg`;
+  const fileType = asset.mimeType || (fileName.endsWith('.png') ? 'image/png' : 'image/jpeg');
+
+  const formData = new FormData();
+  formData.append('file', {
+    uri: fileUri,
+    name: fileName,
+    type: fileType,
+  });
+  formData.append('idProofType', idProofType);
+  formData.append('idProofNumber', idProofNumber);
+
+  const uploadUrl = `${BASE_URL}/profiles/id-proof`;
+
+  if (__DEV__) {
+    console.log('[API ID Proof Upload] ➜ POST', uploadUrl, { idProofType, idProofNumber, fileName });
+  }
+
+  const response = await fetch(uploadUrl, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+    },
+    body: formData,
+  });
+
+  const responseText = await response.text();
+  let responseData = null;
+  if (responseText) {
+    try {
+      responseData = JSON.parse(responseText);
+    } catch {
+      responseData = responseText;
+    }
+  }
+
+  if (!response.ok) {
+    const backendMessage =
+      typeof responseData === 'object'
+        ? responseData?.message || responseData?.error
+        : responseData;
+    const error = new Error(backendMessage || `Upload failed with status ${response.status}`);
+    error.response = { status: response.status, data: responseData };
+    throw error;
+  }
+
+  return responseData;
+};
+
 export default api;

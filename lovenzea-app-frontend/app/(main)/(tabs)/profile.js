@@ -13,6 +13,7 @@ import {
   PanResponder,
   KeyboardAvoidingView,
   Keyboard,
+  Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../../src/context/AuthContext';
@@ -22,6 +23,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { 
   Settings, 
   ChevronLeft, 
+  ChevronRight,
   MoreHorizontal, 
   Camera, 
   MapPin, 
@@ -46,9 +48,18 @@ import {
   Map,
   Briefcase,
   Globe,
+  Calendar,
+  Clock,
+  ShieldCheck,
+  FileText,
+  CheckCircle2,
+  AlertCircle,
+  UploadCloud,
+  ChevronDown,
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
-import api, { uploadProfilePhotoApi } from '../../../src/services/api';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import api, { uploadProfilePhotoApi, uploadIdProofApi } from '../../../src/services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
 import { normalizePhotoUrl, getFallbackAvatar } from '../../../src/utils/imageUrl';
@@ -69,6 +80,124 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState('Personal');
   const [sentCount, setSentCount] = useState(0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const tabScrollRef = React.useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  // Document Verification States
+  const [showDocUploadModal, setShowDocUploadModal] = useState(false);
+  const [selectedDocType, setSelectedDocType] = useState('Aadhar Card');
+  const [docNumber, setDocNumber] = useState('');
+  const [docFile, setDocFile] = useState(null);
+  const [submittingDoc, setSubmittingDoc] = useState(false);
+
+  const DOC_TYPES = [
+    { label: 'Aadhaar Card', value: 'Aadhar Card', placeholder: '12-digit Aadhaar Number' },
+    { label: 'PAN Card', value: 'PAN Card', placeholder: '10-digit PAN (e.g. ABCDE1234F)' },
+    { label: 'Passport', value: 'Passport', placeholder: 'Passport Number (e.g. A1234567)' },
+    { label: 'Driving License', value: 'Driving License', placeholder: 'Driving License Number' },
+    { label: 'Voter ID', value: 'Voter ID', placeholder: 'Voter ID (e.g. ABC1234567)' },
+  ];
+
+  const handlePickDocImage = () => {
+    Alert.alert('Upload Document', 'Choose document photo source', [
+      { text: 'Camera', onPress: () => openDocPicker('camera') },
+      { text: 'Gallery', onPress: () => openDocPicker('gallery') },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  const openDocPicker = async (source) => {
+    const options = { mediaTypes: ['images'], allowsEditing: false, quality: 0.8 };
+    let result;
+    if (source === 'camera') {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Toast.show({ type: 'error', text1: 'Camera permission denied' });
+        return;
+      }
+      result = await ImagePicker.launchCameraAsync(options);
+    } else {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Toast.show({ type: 'error', text1: 'Gallery permission denied' });
+        return;
+      }
+      result = await ImagePicker.launchImageLibraryAsync(options);
+    }
+
+    if (!result.canceled && result.assets.length > 0) {
+      setDocFile(result.assets[0]);
+    }
+  };
+
+  const handleSubmitVerificationDoc = async () => {
+    if (!docFile) {
+      Toast.show({ type: 'error', text1: 'Document Required', text2: 'Please upload a photo of your ID document' });
+      return;
+    }
+    if (!docNumber.trim()) {
+      Toast.show({ type: 'error', text1: 'ID Number Required', text2: 'Please enter your document ID number' });
+      return;
+    }
+
+    try {
+      setSubmittingDoc(true);
+      const updatedProfile = await uploadIdProofApi(docFile, selectedDocType, docNumber.trim().toUpperCase());
+      setProfileData(updatedProfile);
+      setShowDocUploadModal(false);
+      setDocFile(null);
+      setDocNumber('');
+      Toast.show({ 
+        type: 'success', 
+        text1: 'Document Submitted!', 
+        text2: 'Admin will verify your identity within 24 hours.' 
+      });
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Failed to submit document';
+      Toast.show({ type: 'error', text1: 'Submission Failed', text2: msg });
+    } finally {
+      setSubmittingDoc(false);
+    }
+  };
+
+  const handleDateChange = (event, selectedDate) => {
+    setShowDatePicker(false);
+    if (selectedDate && event.type !== 'dismissed') {
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      const formattedDate = `${year}-${month}-${day}`;
+      
+      const today = new Date();
+      let calculatedAge = today.getFullYear() - year;
+      const m = today.getMonth() - selectedDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < selectedDate.getDate())) {
+        calculatedAge--;
+      }
+      
+      setFormData(prev => ({ 
+        ...prev, 
+        dateOfBirth: formattedDate,
+        age: calculatedAge > 0 ? String(calculatedAge) : prev.age 
+      }));
+    }
+  };
+
+  const handleTimeChange = (event, selectedTime) => {
+    setShowTimePicker(false);
+    if (selectedTime && event.type !== 'dismissed') {
+      let hours = selectedTime.getHours();
+      const minutes = String(selectedTime.getMinutes()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      const formattedTime = `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+      setFormData(prev => ({ ...prev, timeOfBirth: formattedTime }));
+    }
+  };
 
   useEffect(() => {
     const showSub = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
@@ -640,10 +769,34 @@ export default function Profile() {
           )}
         </View>
 
-        {/* Tab Segment Selector Control */}
+        {/* Tab Segment Selector Control with Scroll Indicators */}
         <View style={styles.segmentContainer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.segmentScroll}>
-            {TABS_LIST.map((tab) => {
+          {canScrollLeft && (
+            <TouchableOpacity 
+              style={[styles.tabArrowBtn, styles.tabArrowLeft]} 
+              onPress={() => {
+                if (tabScrollRef.current) tabScrollRef.current.scrollTo({ x: 0, animated: true });
+              }}
+              activeOpacity={0.7}
+            >
+              <ChevronLeft size={11} color="#C9748A" strokeWidth={2.5} />
+            </TouchableOpacity>
+          )}
+
+          <ScrollView 
+            ref={tabScrollRef}
+            style={{ flex: 1 }}
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            contentContainerStyle={styles.segmentScroll}
+            onScroll={(e) => {
+              const { contentOffset, layoutMeasurement, contentSize } = e.nativeEvent;
+              setCanScrollLeft(contentOffset.x > 8);
+              setCanScrollRight(contentOffset.x < contentSize.width - layoutMeasurement.width - 8);
+            }}
+            scrollEventThrottle={16}
+          >
+            {TABS_LIST.map((tab, idx) => {
               const isActive = activeTab === tab;
               return (
                 <TouchableOpacity
@@ -651,6 +804,9 @@ export default function Profile() {
                   style={[styles.segmentBtn, isActive && styles.segmentBtnActive]}
                   onPress={() => {
                     setActiveTab(tab);
+                    if (tabScrollRef.current) {
+                      tabScrollRef.current.scrollTo({ x: Math.max(0, idx * 80 - 60), animated: true });
+                    }
                   }}
                 >
                   <Text style={[styles.segmentText, isActive && styles.segmentTextActive]}>
@@ -660,6 +816,18 @@ export default function Profile() {
               );
             })}
           </ScrollView>
+
+          {canScrollRight && (
+            <TouchableOpacity 
+              style={[styles.tabArrowBtn, styles.tabArrowRight]} 
+              onPress={() => {
+                if (tabScrollRef.current) tabScrollRef.current.scrollToEnd({ animated: true });
+              }}
+              activeOpacity={0.7}
+            >
+              <ChevronRight size={11} color="#C9748A" strokeWidth={2.5} />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Tab Contents */}
@@ -675,13 +843,16 @@ export default function Profile() {
                    <View style={styles.infoPill}>
                     <Text style={styles.infoKey}>Born</Text>
                     {isEditing ? (
-                      <TextInput 
-                        style={styles.inlinePillInput} 
-                        defaultValue={formData.dateOfBirth} 
-                        onChangeText={(val) => setFormData({ ...formData, dateOfBirth: val })}
-                        placeholder="YYYY-MM-DD"
-                        placeholderTextColor="#999"
-                      />
+                      <TouchableOpacity 
+                        style={styles.inlinePillPickerBtn}
+                        onPress={() => setShowDatePicker(true)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.inlinePillPickerText, !formData.dateOfBirth && styles.inlinePillPlaceholder]}>
+                          {formData.dateOfBirth || 'Select Date'}
+                        </Text>
+                        <Calendar size={13} color="#C9748A" />
+                      </TouchableOpacity>
                     ) : (
                       <Text style={styles.infoVal}>{profileData?.dateOfBirth || 'N/A'}</Text>
                     )}
@@ -689,7 +860,16 @@ export default function Profile() {
                   <View style={styles.infoPill}>
                     <Text style={styles.infoKey}>Time</Text>
                     {isEditing ? (
-                      <TextInput style={styles.inlinePillInput} defaultValue={formData.timeOfBirth} onChangeText={(val) => setFormData({ ...formData, timeOfBirth: val })} />
+                      <TouchableOpacity 
+                        style={styles.inlinePillPickerBtn}
+                        onPress={() => setShowTimePicker(true)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.inlinePillPickerText, !formData.timeOfBirth && styles.inlinePillPlaceholder]}>
+                          {formData.timeOfBirth || 'Select Time'}
+                        </Text>
+                        <Clock size={13} color="#C9748A" />
+                      </TouchableOpacity>
                     ) : (
                       <Text style={styles.infoVal}>{profileData?.timeOfBirth || 'N/A'}</Text>
                     )}
@@ -1157,6 +1337,197 @@ export default function Profile() {
         </View>
       )}
 
+      {/* Identity & Document Verification Card */}
+      {!isEditing && (
+        <View style={styles.verificationSectionCard}>
+          <View style={styles.verificationCardHeader}>
+            <View style={styles.verificationTitleRow}>
+              <View style={styles.verificationIconWrapper}>
+                <ShieldCheck size={22} color="#C9748A" />
+              </View>
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Text style={styles.verificationMainTitle}>Identity Verification</Text>
+                  <View style={[
+                    styles.verificationStatusPill,
+                    profileData?.verificationStatus === 'VERIFIED' && styles.statusPillVerified,
+                    profileData?.verificationStatus === 'PENDING' && styles.statusPillPending,
+                    profileData?.verificationStatus === 'REJECTED' && styles.statusPillRejected,
+                  ]}>
+                    {profileData?.verificationStatus === 'VERIFIED' ? (
+                      <CheckCircle2 size={11} color="#059669" style={{ marginRight: 4 }} />
+                    ) : profileData?.verificationStatus === 'PENDING' ? (
+                      <Clock size={11} color="#D97706" style={{ marginRight: 4 }} />
+                    ) : profileData?.verificationStatus === 'REJECTED' ? (
+                      <AlertCircle size={11} color="#DC2626" style={{ marginRight: 4 }} />
+                    ) : (
+                      <ShieldCheck size={11} color="#C9748A" style={{ marginRight: 4 }} />
+                    )}
+                    <Text style={[
+                      styles.verificationStatusText,
+                      profileData?.verificationStatus === 'VERIFIED' && styles.statusTextVerified,
+                      profileData?.verificationStatus === 'PENDING' && styles.statusTextPending,
+                      profileData?.verificationStatus === 'REJECTED' && styles.statusTextRejected,
+                    ]}>
+                      {profileData?.verificationStatus === 'VERIFIED' 
+                        ? 'VERIFIED' 
+                        : profileData?.verificationStatus === 'PENDING' 
+                        ? 'IN REVIEW' 
+                        : profileData?.verificationStatus === 'REJECTED' 
+                        ? 'REJECTED' 
+                        : 'NOT VERIFIED'}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.verificationSubTitle}>
+                  {profileData?.verificationStatus === 'VERIFIED'
+                    ? 'Your ID is verified by admin with a 100% Trust Badge.'
+                    : profileData?.verificationStatus === 'PENDING'
+                    ? 'Your document is currently under admin review.'
+                    : profileData?.verificationStatus === 'REJECTED'
+                    ? 'Document was rejected. Please upload a clear valid ID.'
+                    : 'Get a trusted verified badge by submitting your official ID.'}
+                </Text>
+              </View>
+            </View>
+
+            {/* Submitted Document Summary if available */}
+            {profileData?.idProofType && (
+              <View style={styles.submittedDocRow}>
+                <FileText size={14} color="#666" style={{ marginRight: 6 }} />
+                <Text style={styles.submittedDocText}>
+                  {profileData.idProofType} • {profileData.idProofNumber ? `•••• ${profileData.idProofNumber.slice(-4)}` : 'Submitted'}
+                </Text>
+              </View>
+            )}
+
+            {/* Action Upload / Update Button */}
+            {profileData?.verificationStatus !== 'VERIFIED' && (
+              <TouchableOpacity
+                style={styles.docUploadActionBtn}
+                activeOpacity={0.85}
+                onPress={() => setShowDocUploadModal(true)}
+              >
+                <LinearGradient
+                  colors={['#C9748A', '#A85268']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.docUploadActionGradient}
+                >
+                  <UploadCloud size={16} color="#FFF" style={{ marginRight: 8 }} />
+                  <Text style={styles.docUploadActionBtnText}>
+                    {profileData?.verificationStatus === 'PENDING' ? 'Update Document' : 'Submit ID Proof'}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
+
+      {/* Modal for Submitting ID Verification Document */}
+      <Modal
+        visible={showDocUploadModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowDocUploadModal(false)}
+      >
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+          style={styles.modalBackdrop}
+        >
+          <View style={styles.modalContentCard}>
+            <View style={styles.modalHeaderRow}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <ShieldCheck size={20} color="#C9748A" style={{ marginRight: 8 }} />
+                <Text style={styles.modalTitle}>Submit ID Document</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowDocUploadModal(false)} style={styles.modalCloseBtn}>
+                <X size={20} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalInstructions}>
+              Select your government-issued ID card and provide the document number for verification.
+            </Text>
+
+            {/* Document Type Pills */}
+            <Text style={styles.modalInputLabel}>Select Document Type</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.docTypesScroll}>
+              {DOC_TYPES.map((type) => {
+                const isSelected = selectedDocType === type.value;
+                return (
+                  <TouchableOpacity
+                    key={type.value}
+                    style={[styles.docTypePill, isSelected && styles.docTypePillActive]}
+                    onPress={() => {
+                      setSelectedDocType(type.value);
+                      setDocNumber('');
+                    }}
+                  >
+                    <Text style={[styles.docTypePillText, isSelected && styles.docTypePillTextActive]}>
+                      {type.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Document Number Input */}
+            <Text style={[styles.modalInputLabel, { marginTop: 14 }]}>
+              {selectedDocType} Number
+            </Text>
+            <TextInput
+              style={styles.modalTextInput}
+              value={docNumber}
+              onChangeText={(text) => setDocNumber(text.toUpperCase())}
+              placeholder={DOC_TYPES.find(d => d.value === selectedDocType)?.placeholder || 'Enter ID number'}
+              placeholderTextColor="#999"
+              autoCapitalize="characters"
+            />
+
+            {/* Document Photo Upload Box */}
+            <Text style={[styles.modalInputLabel, { marginTop: 14 }]}>Upload Photo of Document</Text>
+            {docFile ? (
+              <View style={styles.docPreviewWrapper}>
+                <Image source={{ uri: docFile.uri }} style={styles.docPreviewImage} resizeMode="cover" />
+                <TouchableOpacity style={styles.docPreviewRemoveBtn} onPress={() => setDocFile(null)}>
+                  <X size={14} color="#FFF" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity style={styles.docUploadDropBox} onPress={handlePickDocImage} activeOpacity={0.8}>
+                <Camera size={28} color="#C9748A" />
+                <Text style={styles.docUploadDropText}>Tap to Capture or Select from Gallery</Text>
+                <Text style={styles.docUploadDropSubText}>PNG, JPG or JPEG up to 10MB</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Submit Button */}
+            <TouchableOpacity
+              style={styles.modalSubmitBtn}
+              onPress={handleSubmitVerificationDoc}
+              disabled={submittingDoc}
+              activeOpacity={0.85}
+            >
+              <LinearGradient
+                colors={['#C9748A', '#A85268']}
+                style={styles.modalSubmitBtnGradient}
+              >
+                {submittingDoc ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Check size={18} color="#FFF" style={{ marginRight: 8 }} />
+                    <Text style={styles.modalSubmitBtnText}>Submit for Admin Verification</Text>
+                  </View>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
       {/* Logout Button */}
       {!isEditing && (
         <View style={styles.logoutContainer}>
@@ -1167,7 +1538,27 @@ export default function Profile() {
         </View>
       )}
 
-    <View style={{ height: 110 }} />
+      {showDatePicker && (
+        <DateTimePicker
+          value={formData.dateOfBirth ? new Date(formData.dateOfBirth) : new Date(2000, 0, 1)}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          maximumDate={new Date(new Date().setFullYear(new Date().getFullYear() - 18))}
+          onChange={handleDateChange}
+        />
+      )}
+
+      {showTimePicker && (
+        <DateTimePicker
+          value={new Date()}
+          mode="time"
+          is24Hour={false}
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={handleTimeChange}
+        />
+      )}
+
+      <View style={{ height: 110 }} />
     </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -1288,6 +1679,25 @@ const styles = StyleSheet.create({
     marginLeft: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#C9748A',
+  },
+  inlinePillPickerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flex: 1,
+    marginLeft: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#C9748A',
+    paddingVertical: 2,
+  },
+  inlinePillPickerText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#2D1E23',
+  },
+  inlinePillPlaceholder: {
+    color: '#999999',
+    fontWeight: '400',
   },
   inlineNameInput: {
     fontSize: 20,
@@ -1473,15 +1883,41 @@ const styles = StyleSheet.create({
   },
   segmentContainer: {
     backgroundColor: '#FFF3F5',
-    borderRadius: 16,
+    borderRadius: 20,
     paddingVertical: 5,
-    paddingHorizontal: 5,
+    paddingHorizontal: 6,
     marginBottom: 20,
     borderWidth: 1,
     borderColor: '#F5E6EA',
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  tabArrowBtn: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#C9748A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+    zIndex: 10,
+    borderWidth: 1,
+    borderColor: '#F5E6EA',
+  },
+  tabArrowLeft: {
+    marginRight: 2,
+  },
+  tabArrowRight: {
+    marginLeft: 2,
   },
   segmentScroll: {
-    paddingHorizontal: 4,
+    paddingHorizontal: 8,
+    alignItems: 'center',
   },
   segmentBtn: {
     paddingHorizontal: 16,
@@ -1728,5 +2164,268 @@ const styles = StyleSheet.create({
     color: '#8F7E84',
     fontWeight: '700',
     marginTop: 2,
+  },
+
+  /* Verification Card Styles */
+  verificationSectionCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 24,
+    padding: 18,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#F5E6EA',
+    shadowColor: '#C9748A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  verificationCardHeader: {
+    width: '100%',
+  },
+  verificationTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  verificationIconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFF0F4',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#FCE7ED',
+  },
+  verificationMainTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#2D1E23',
+  },
+  verificationSubTitle: {
+    fontSize: 12,
+    color: '#88797D',
+    marginTop: 4,
+    lineHeight: 16,
+  },
+  verificationStatusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    backgroundColor: '#F3F4F6',
+  },
+  statusPillVerified: {
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  statusPillPending: {
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  statusPillRejected: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  verificationStatusText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#6B7280',
+    letterSpacing: 0.5,
+  },
+  statusTextVerified: {
+    color: '#059669',
+  },
+  statusTextPending: {
+    color: '#D97706',
+  },
+  statusTextRejected: {
+    color: '#DC2626',
+  },
+  submittedDocRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  submittedDocText: {
+    fontSize: 12,
+    color: '#4B5563',
+    fontWeight: '600',
+  },
+  docUploadActionBtn: {
+    marginTop: 14,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#C9748A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  docUploadActionGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  docUploadActionBtnText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+
+  /* Verification Modal Styles */
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    justifyContent: 'flex-end',
+  },
+  modalContentCard: {
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    padding: 24,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 28,
+    maxHeight: '90%',
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#2D1E23',
+  },
+  modalCloseBtn: {
+    padding: 6,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+  },
+  modalInstructions: {
+    fontSize: 12,
+    color: '#777',
+    marginBottom: 16,
+    lineHeight: 18,
+  },
+  modalInputLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  docTypesScroll: {
+    paddingVertical: 2,
+    gap: 8,
+  },
+  docTypePill: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 14,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginRight: 6,
+  },
+  docTypePillActive: {
+    backgroundColor: 'rgba(201, 116, 138, 0.12)',
+    borderColor: '#C9748A',
+  },
+  docTypePillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  docTypePillTextActive: {
+    color: '#C9748A',
+    fontWeight: '800',
+  },
+  modalTextInput: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  docUploadDropBox: {
+    backgroundColor: '#FFF5F7',
+    borderWidth: 2,
+    borderColor: '#F8D6CB',
+    borderStyle: 'dashed',
+    borderRadius: 18,
+    paddingVertical: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  docUploadDropText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#C9748A',
+    marginTop: 6,
+  },
+  docUploadDropSubText: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    marginTop: 2,
+  },
+  docPreviewWrapper: {
+    position: 'relative',
+    height: 140,
+    borderRadius: 18,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  docPreviewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  docPreviewRemoveBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalSubmitBtn: {
+    marginTop: 22,
+    borderRadius: 18,
+    overflow: 'hidden',
+    shadowColor: '#C9748A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  modalSubmitBtnGradient: {
+    paddingVertical: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalSubmitBtnText: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '800',
   },
 });

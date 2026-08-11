@@ -2518,7 +2518,7 @@ Generated on: ${new Date().toLocaleString()}
                           </div>
                         ) : (
                           <input
-                            type={key === 'dateOfBirth' ? 'date' : 'text'}
+                            type={key === 'dateOfBirth' ? 'date' : key === 'timeOfBirth' ? 'time' : 'text'}
                             value={value || ''}
                             onChange={(e) => handleModalDataChange(key, e.target.value)}
                             readOnly={key === 'age'}

@@ -163,7 +163,7 @@ export default function Register() {
 
               {/* Avatar Upload */}
               <View style={styles.avatarSection}>
-                <TouchableOpacity onPress={handlePickImage} style={styles.avatarWrapper} activeOpacity={0.8}>
+                <TouchableOpacity onPress={handlePickImage} style={styles.avatarWrapper} activeOpacity={0.85}>
                   {photoData ? (
                     <Image 
                       source={{ uri: photoData.uri }} 
@@ -171,15 +171,31 @@ export default function Register() {
                       onError={(e) => console.log('Image failed:', photoData.uri, e.nativeEvent)}
                     />
                   ) : (
-                    <View style={[styles.avatar, styles.avatarPlaceholder]}>
-                      <Camera size={32} color="#F5E6E8" />
-                      <Text style={styles.avatarPlaceholderText}>Add Photo (Optional)</Text>
-                    </View>
+                    <LinearGradient
+                      colors={['#FFF0F3', '#FFE4E8']}
+                      style={[styles.avatar, styles.avatarPlaceholder]}
+                    >
+                      <Camera size={34} color="#C9748A" />
+                    </LinearGradient>
                   )}
                   <View style={styles.cameraBtn}>
-                    <Camera size={14} color="#FFF" />
+                    <Camera size={13} color="#FFF" />
                   </View>
                 </TouchableOpacity>
+
+                <View style={styles.avatarLabelsContainer}>
+                  <TouchableOpacity onPress={handlePickImage} activeOpacity={0.7} style={styles.avatarTitleRow}>
+                    <Text style={styles.avatarMainTitle}>
+                      {photoData ? 'Change Profile Photo' : 'Add Profile Photo'}
+                    </Text>
+                    <View style={styles.optionalBadge}>
+                      <Text style={styles.optionalBadgeText}>Optional</Text>
+                    </View>
+                  </TouchableOpacity>
+                  <Text style={styles.avatarSubTitle}>
+                    {photoData ? 'Looking great! Tap to pick a different picture' : 'Profiles with photos receive 5x more responses'}
+                  </Text>
+                </View>
               </View>
 
               {/* Form Fields */}
@@ -278,12 +294,54 @@ const styles = StyleSheet.create({
   activeTabText: { color: '#3C2430', fontWeight: '700' },
   activeTabIndicator: { position: 'absolute', bottom: -1, width: '60%', height: 3, borderRadius: 3 },
   
-  avatarSection: { alignItems: 'center', marginBottom: 20 },
-  avatarWrapper: { position: 'relative' },
-  avatar: { width: 90, height: 90, borderRadius: 45, backgroundColor: '#FFF', borderWidth: 2, borderColor: '#F8D6CB' },
-  avatarPlaceholder: { justifyContent: 'center', alignItems: 'center', borderStyle: 'dashed' },
-  avatarPlaceholderText: { fontSize: 11, color: '#88797D', marginTop: 4, fontWeight: '600' },
-  cameraBtn: { position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderRadius: 14, backgroundColor: '#C9748A', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFF' },
+  avatarSection: { alignItems: 'center', marginBottom: 22 },
+  avatarWrapper: {
+    position: 'relative',
+    shadowColor: '#C9748A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  avatar: { width: 92, height: 92, borderRadius: 46, backgroundColor: '#FFF', borderWidth: 3, borderColor: '#FFF' },
+  avatarPlaceholder: { justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#F8D6CB' },
+  cameraBtn: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#C9748A',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2.5,
+    borderColor: '#FFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  avatarLabelsContainer: { alignItems: 'center', marginTop: 10 },
+  avatarTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  avatarMainTitle: { fontSize: 14, fontWeight: '700', color: '#3C2430' },
+  optionalBadge: {
+    backgroundColor: 'rgba(201, 116, 138, 0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(201, 116, 138, 0.25)',
+  },
+  optionalBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#C9748A',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  avatarSubTitle: { fontSize: 11, color: '#88797D', marginTop: 3, fontWeight: '500' },
 
   inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: 18, paddingHorizontal: 16, height: 56, marginBottom: 16, borderWidth: 1, borderColor: '#F8D6CB' },
   inputIcon: { marginRight: 12 },

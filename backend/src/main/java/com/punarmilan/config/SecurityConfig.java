@@ -132,7 +132,23 @@ public class SecurityConfig {
                 .map(String::trim)
                 .filter(origin -> !origin.isEmpty())
                 .toList();
-        configuration.setAllowedOrigins(origins);
+
+        List<String> originPatterns = new ArrayList<>(origins);
+        // Include wildcard patterns for all production and staging domains
+        originPatterns.addAll(Arrays.asList(
+                "http://localhost:*",
+                "http://127.0.0.1:*",
+                "https://*.lovenzea.com",
+                "https://lovenzea.com",
+                "https://*.lovenzea.in",
+                "https://lovenzea.in",
+                "https://*.lovenzea.online",
+                "https://lovenzea.online",
+                "https://*.asp-admin.lovenzea.online",
+                "https://asp-admin.lovenzea.online"
+        ));
+
+        configuration.setAllowedOriginPatterns(originPatterns.stream().distinct().toList());
 
         configuration.setAllowedMethods(Arrays.asList(
                 "GET",

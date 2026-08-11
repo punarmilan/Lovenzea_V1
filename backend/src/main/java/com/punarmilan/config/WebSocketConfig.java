@@ -88,14 +88,19 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-
-        String[] origins = Arrays.stream(allowedOrigins.split(","))
-                .map(String::trim)
-                .filter(origin -> !origin.isEmpty())
-                .toArray(String[]::new);
-
         registry.addEndpoint("/ws")
-                .setAllowedOrigins(origins)
+                .setAllowedOriginPatterns(
+                        "http://localhost:*",
+                        "http://127.0.0.1:*",
+                        "https://*.lovenzea.com",
+                        "https://lovenzea.com",
+                        "https://*.lovenzea.in",
+                        "https://lovenzea.in",
+                        "https://*.lovenzea.online",
+                        "https://lovenzea.online",
+                        "https://*.asp-admin.lovenzea.online",
+                        "https://asp-admin.lovenzea.online"
+                )
                 .withSockJS();
     }
 

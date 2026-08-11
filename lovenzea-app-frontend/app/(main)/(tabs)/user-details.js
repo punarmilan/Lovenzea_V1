@@ -173,7 +173,15 @@ export default function UserDetails() {
           <View style={styles.photoActionsRow}>
             <TouchableOpacity 
               style={styles.actionCircleBtn} 
-              onPress={() => router.push({ pathname: '/messages', params: { userId: profile.userId, name: profile.fullName } })}
+              onPress={() => router.push({ 
+                pathname: '/chat/[id]', 
+                params: { 
+                  id: profile.userId || profile.id,
+                  userId: profile.userId || profile.id, 
+                  name: profile.fullName || 'User',
+                  photo: profile.profilePhoto || profile.photoUrl1 || ''
+                } 
+              })}
             >
               <MessageCircleHeart size={22} color="#FFF" />
             </TouchableOpacity>

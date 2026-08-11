@@ -32,10 +32,8 @@ import {
 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { useNavigation } from '@react-navigation/native';
 import api, { LOCAL_IP } from '../../../src/services/api';
 import { normalizePhotoUrl, getFallbackAvatar } from '../../../src/utils/imageUrl';
-import MapView, { Marker, Callout } from 'react-native-maps';
 
 const { width } = Dimensions.get('window');
 
@@ -53,7 +51,6 @@ const INTEREST_TAGS = [
 
 export default function SearchScreen() {
   const router = useRouter();
-  const navigation = useNavigation();
   const scrollViewRef = React.useRef(null);
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -450,48 +447,78 @@ export default function SearchScreen() {
             People with <Text style={{ color: '#C9748A', fontWeight: 'bold' }}>"{selectedInterest}"</Text> interest around you (within {maxDistance}km)
           </Text>
 
-          {/* Map Graphic Container */}
+          {/* Map / Radar Container */}
           <View style={[styles.mapCard, { overflow: 'hidden' }]}>
-            <MapView
+            {/* Map Ambient Grid Background */}
+            <LinearGradient
+              colors={['#2D1B24', '#3E202E', '#2D1B24']}
               style={StyleSheet.absoluteFillObject}
-              initialRegion={{
-                latitude: 19.0760,
-                longitude: 72.8777,
-                latitudeDelta: 3.5,
-                longitudeDelta: 3.5,
-              }}
-            >
-              {mapProfiles.map((p) => {
-                const isSelected = selectedMapProfile?.id === p.id;
-                return (
-                  <Marker
-                    key={p.id}
-                    coordinate={{ latitude: p.latitude, longitude: p.longitude }}
-                    onPress={() => setSelectedMapProfile(p)}
+            />
+
+            {/* Radar / Distance Rings */}
+            <View style={styles.radarRingOuter} />
+            <View style={styles.radarRingMiddle} />
+            <View style={styles.radarRingInner} />
+
+            {/* Radius Labels */}
+            <Text style={[styles.radarDistLabel, { top: 12, right: 16 }]}>{maxDistance}km</Text>
+            <Text style={[styles.radarDistLabel, { top: 46, right: 38 }]}>{Math.round(maxDistance * 0.5)}km</Text>
+
+            {/* Center "You" Beacon */}
+            <View style={styles.centerBeacon}>
+              <View style={styles.centerBeaconPulse} />
+              <View style={styles.centerBeaconCore}>
+                <MapPin size={14} color="#FFF" />
+              </View>
+              <Text style={styles.centerBeaconText}>You</Text>
+            </View>
+
+            {/* Positioned Profile Markers */}
+            {mapProfiles.map((p, idx) => {
+              const isSelected = selectedMapProfile?.id === p.id;
+              // Disperse markers elegantly around the center
+              const positions = [
+                { top: '18%', left: '16%' },
+                { top: '22%', right: '16%' },
+                { bottom: '22%', left: '20%' },
+                { bottom: '18%', right: '18%' },
+                { top: '48%', right: '10%' }
+              ];
+              const pos = positions[idx % positions.length];
+
+              return (
+                <View key={p.id} style={[styles.mapMarkerContainer, pos]}>
+                  {/* Callout Info Tag */}
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    style={styles.calloutBubble}
+                    onPress={() => router.push({ pathname: '/user-details', params: { userId: p.id } })}
                   >
-                    <View style={styles.mapMarkerContainer}>
-                      <TouchableOpacity
-                        activeOpacity={0.8}
-                        style={[styles.markerCircleWrapper, isSelected && styles.markerCircleActive]}
-                        onPress={() => {
-                          setSelectedMapProfile(p);
-                          router.push({ pathname: '/user-details', params: { userId: p.id } });
-                        }}
-                      >
-                        <Image 
-                          source={p.image} 
-                          style={styles.markerAvatar} 
-                          onError={(e) => console.log('Image failed:', p.image?.uri, e.nativeEvent)} 
-                        />
-                        <View style={styles.markerBadgePin}>
-                          <MapPin size={8} color="#FFF" />
-                        </View>
-                      </TouchableOpacity>
+                    <Text style={styles.calloutText} numberOfLines={1}>{p.fullName?.split(' ')[0]} • {p.distance || 25}km</Text>
+                    <View style={styles.calloutArrow} />
+                  </TouchableOpacity>
+
+                  {/* Avatar Pin */}
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    style={[styles.markerCircleWrapper, isSelected && styles.markerCircleActive]}
+                    onPress={() => {
+                      setSelectedMapProfile(p);
+                      router.push({ pathname: '/user-details', params: { userId: p.id } });
+                    }}
+                  >
+                    <Image 
+                      source={p.image} 
+                      style={styles.markerAvatar} 
+                      onError={(e) => console.log('Image failed:', p.image?.uri, e.nativeEvent)} 
+                    />
+                    <View style={styles.markerBadgePin}>
+                      <MapPin size={8} color="#FFF" />
                     </View>
-                  </Marker>
-                );
-              })}
-            </MapView>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
           </View>
         </View>
         {/* ─── Search Results Section (Rendered below the map) ─── */}
@@ -813,43 +840,89 @@ const styles = StyleSheet.create({
     height: 280,
     borderRadius: 24,
     overflow: 'hidden',
-    backgroundColor: '#E5E3DF',
+    backgroundColor: '#2D1B24',
     position: 'relative',
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: '#4A2A38',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  radarRingOuter: {
+    position: 'absolute',
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    borderWidth: 1,
+    borderColor: 'rgba(201, 116, 138, 0.2)',
+    alignSelf: 'center',
+    top: 15,
+  },
+  radarRingMiddle: {
+    position: 'absolute',
+    width: 170,
+    height: 170,
+    borderRadius: 85,
+    borderWidth: 1,
+    borderColor: 'rgba(201, 116, 138, 0.3)',
+    alignSelf: 'center',
+    top: 55,
+  },
+  radarRingInner: {
+    position: 'absolute',
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    borderWidth: 1,
+    borderColor: 'rgba(201, 116, 138, 0.45)',
+    alignSelf: 'center',
+    top: 95,
+  },
+  radarDistLabel: {
+    position: 'absolute',
+    fontSize: 10,
+    fontWeight: '700',
+    color: 'rgba(255, 255, 255, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  centerBeacon: {
+    position: 'absolute',
+    alignSelf: 'center',
+    top: 120,
+    alignItems: 'center',
+    zIndex: 5,
+  },
+  centerBeaconPulse: {
+    position: 'absolute',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(201, 116, 138, 0.25)',
+    top: -8,
+  },
+  centerBeaconCore: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#C9748A',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#C9748A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
     elevation: 4,
   },
-  mapBackgroundImage: {
-    width: '100%',
-    height: '100%',
-    position: 'absolute',
-    opacity: 0.65,
-  },
-  mapOverlayTint: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 252, 245, 0.4)',
-  },
-  mapRoadLine1: {
-    position: 'absolute',
-    top: -20,
-    left: '40%',
-    width: 14,
-    height: 320,
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    transform: [{ rotate: '35deg' }],
-  },
-  mapRoadLine2: {
-    position: 'absolute',
-    top: '50%',
-    left: -20,
-    width: 400,
-    height: 12,
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    transform: [{ rotate: '-15deg' }],
+  centerBeaconText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFF',
+    marginTop: 2,
   },
 
   /* Map Markers */

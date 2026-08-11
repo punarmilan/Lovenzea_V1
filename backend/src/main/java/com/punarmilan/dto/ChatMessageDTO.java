@@ -17,6 +17,7 @@ public class ChatMessageDTO {
     private Long recipientId;
     private String content;
     private boolean read;
+    @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", timezone = "UTC")
     private LocalDateTime createdAt;
     private String error;
 }

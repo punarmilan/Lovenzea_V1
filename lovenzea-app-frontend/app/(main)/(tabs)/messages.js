@@ -7,6 +7,16 @@ import { useAuth } from '../../../src/context/AuthContext';
 import Toast from 'react-native-toast-message';
 import { normalizePhotoUrl, getFallbackAvatar } from '../../../src/utils/imageUrl';
 
+const parseServerDate = (dateStr) => {
+  if (!dateStr) return new Date();
+  if (dateStr instanceof Date) return dateStr;
+  const str = String(dateStr).trim();
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(str) && !str.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(str)) {
+    return new Date(str + 'Z');
+  }
+  return new Date(str);
+};
+
 export default function Messages() {
   const router = useRouter();
   const { user: currentUser } = useAuth();
@@ -182,7 +192,7 @@ export default function Messages() {
   const renderChatItem = ({ item }) => {
     const photo = item.otherProfilePhotoUrl || item.otherProfilePhoto || item.profilePhoto;
     const normalizedUrl = normalizePhotoUrl(photo);
-    const timeStr = item.lastActive ? new Date(item.lastActive).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent';
+    const timeStr = item.lastActive ? parseServerDate(item.lastActive).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent';
 
     return (
       <TouchableOpacity 

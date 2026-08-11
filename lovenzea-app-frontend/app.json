@@ -13,17 +13,12 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#ffffff",
+        "backgroundColor": "#0b051f",
         "foregroundImage": "./assets/images/project_logo.jpeg"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.lovenzea.online",
-      "config": {
-        "googleMaps": {
-          "apiKey": ""
-        }
-      }
+      "package": "com.lovenzea.online"
     },
     "web": {
       "output": "static",
@@ -35,9 +30,9 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/project_logo.jpeg",
-          "imageWidth": 250,
+          "imageWidth": 220,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#0b051f"
         }
       ],
       "@react-native-community/datetimepicker",

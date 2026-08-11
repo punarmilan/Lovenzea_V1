@@ -13,6 +13,16 @@ import { SOCKJS_URL } from '../../src/services/api';
 import api from '../../src/services/api';
 import { normalizePhotoUrl, getFallbackAvatar } from '../../src/utils/imageUrl';
 
+const parseServerDate = (dateStr) => {
+  if (!dateStr) return new Date();
+  if (dateStr instanceof Date) return dateStr;
+  const str = String(dateStr).trim();
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(str) && !str.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(str)) {
+    return new Date(str + 'Z');
+  }
+  return new Date(str);
+};
+
 export default function ChatRoom() {
   const params = useLocalSearchParams();
   console.log('Chat route params:', params);
@@ -246,7 +256,7 @@ export default function ChatRoom() {
             </Text>
             <View style={styles.messageFooter}>
               <Text style={[styles.timeText, isMe ? styles.myTime : styles.theirTime]}>
-                {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {parseServerDate(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </Text>
               {isMe && (
                 <View style={styles.readReceipt}>
@@ -266,76 +276,75 @@ export default function ChatRoom() {
 
   const avatarUri = getFallbackAvatar({ name, profilePhoto: photo });
 
-  const screenContent = (
-    <ImageBackground 
-      source={{ uri: 'https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png' }} 
-      style={styles.bgImage}
-      resizeMode="cover"
-    >
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <ChevronLeft size={24} color={Colors.text} />
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Image 
-            source={{ uri: avatarUri }} 
-            style={styles.headerAvatar} 
-            onError={(e) => console.log('Image failed:', avatarUri, e.nativeEvent)} 
-          />
-          <View>
-            <Text style={styles.headerTitle}>{name}</Text>
-            <Text style={[styles.headerStatus, isOnline ? styles.onlineColor : styles.offlineColor]}>
-              {isTyping ? 'Typing...' : (isOnline ? 'Online' : 'Offline')}
-            </Text>
-          </View>
-        </View>
-        <TouchableOpacity style={styles.optionsBtn} onPress={() => setShowOptions(true)}>
-          <MoreVertical size={22} color={Colors.text} />
-        </TouchableOpacity>
-      </View>
-
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        keyExtractor={(item, index) => item.id ? item.id.toString() : index.toString()}
-        renderItem={renderMessage}
-        contentContainerStyle={styles.messageList}
-        inverted
-        showsVerticalScrollIndicator={true}
-        persistentScrollbar={true}
-      />
-
-      <View style={styles.inputWrapper}>
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Message"
-            placeholderTextColor="#999"
-            value={input}
-            onChangeText={handleTyping}
-            multiline
-          />
-        </View>
-        <TouchableOpacity 
-          style={[styles.sendBtn, !input.trim() && styles.sendBtnDisabled]} 
-          onPress={sendMessage}
-          disabled={!input.trim()}
-        >
-          <Send size={20} color={Colors.white} />
-        </TouchableOpacity>
-      </View>
-    </ImageBackground>
-  );
-
   return (
-    <KeyboardAvoidingView 
-      style={{ flex: 1, backgroundColor: '#FFF6F5' }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={0}
-    >
-      <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
-        {screenContent}
-      </SafeAreaView>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        <ImageBackground 
+          source={{ uri: 'https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png' }} 
+          style={styles.bgImage}
+          resizeMode="cover"
+        >
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+              <ChevronLeft size={24} color={Colors.text} />
+            </TouchableOpacity>
+            <View style={styles.headerCenter}>
+              <Image 
+                source={{ uri: avatarUri }} 
+                style={styles.headerAvatar} 
+                onError={(e) => console.log('Image failed:', avatarUri, e.nativeEvent)} 
+              />
+              <View>
+                <Text style={styles.headerTitle}>{name}</Text>
+                <Text style={[styles.headerStatus, isOnline ? styles.onlineColor : styles.offlineColor]}>
+                  {isTyping ? 'Typing...' : (isOnline ? 'Online' : 'Offline')}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity style={styles.optionsBtn} onPress={() => setShowOptions(true)}>
+              <MoreVertical size={22} color={Colors.text} />
+            </TouchableOpacity>
+          </View>
+
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            keyExtractor={(item, index) => item.id ? item.id.toString() : index.toString()}
+            renderItem={renderMessage}
+            contentContainerStyle={styles.messageList}
+            inverted
+            showsVerticalScrollIndicator={true}
+            persistentScrollbar={true}
+            keyboardShouldPersistTaps="handled"
+          />
+
+          <SafeAreaView edges={['bottom']} style={styles.bottomBarContainer}>
+            <View style={styles.inputWrapper}>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Type a message..."
+                  placeholderTextColor="#999"
+                  value={input}
+                  onChangeText={handleTyping}
+                  multiline
+                />
+              </View>
+              <TouchableOpacity 
+                style={[styles.sendBtn, !input.trim() && styles.sendBtnDisabled]} 
+                onPress={sendMessage}
+                disabled={!input.trim()}
+              >
+                <Send size={20} color={Colors.white} />
+              </TouchableOpacity>
+            </View>
+          </SafeAreaView>
+        </ImageBackground>
+      </KeyboardAvoidingView>
 
       {/* Options Menu Modal */}
       <Modal
@@ -400,7 +409,7 @@ export default function ChatRoom() {
           </View>
         </View>
       </Modal>
-    </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -569,13 +578,18 @@ const styles = StyleSheet.create({
   readReceipt: {
     marginLeft: 2,
   },
+  bottomBarContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#F0E6E8',
+  },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     paddingHorizontal: Spacing.s,
-    paddingTop: Spacing.s,
-    paddingBottom: 10,
-    backgroundColor: 'transparent',
+    paddingTop: 8,
+    paddingBottom: Platform.OS === 'android' ? 8 : 4,
+    backgroundColor: '#FFFFFF',
   },
   inputContainer: {
     flex: 1,

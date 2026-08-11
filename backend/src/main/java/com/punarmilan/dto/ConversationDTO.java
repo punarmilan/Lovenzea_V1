@@ -15,6 +15,7 @@ public class ConversationDTO {
     private String otherUserName;
     private String otherProfilePhotoUrl;
     private String lastMessage;
+    @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", timezone = "UTC")
     private LocalDateTime lastActive;
     private Long unreadCount;
     private Boolean isOnline;

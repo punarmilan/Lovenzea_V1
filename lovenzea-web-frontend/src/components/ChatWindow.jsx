@@ -8,6 +8,16 @@ import { fetchChatHistory, setActiveChatUser, markAllChatAsRead, clearChatError 
 import ChatService from '../services/chatService';
 import { formatDisplayName } from '../utils/mockData';
 
+const parseServerDate = (dateStr) => {
+    if (!dateStr) return new Date();
+    if (dateStr instanceof Date) return dateStr;
+    const str = String(dateStr).trim();
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(str) && !str.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(str)) {
+        return new Date(str + 'Z');
+    }
+    return new Date(str);
+};
+
 export default function ChatWindow({ targetUser, onClose }) {
     const dispatch = useDispatch();
     const [message, setMessage] = useState('');
@@ -148,7 +158,7 @@ export default function ChatWindow({ targetUser, onClose }) {
                                     }`}>
                                     <p className="leading-relaxed break-words">{msg.content}</p>
                                     <p className={`text-[9px] mt-1 text-right ${isMe ? 'text-rose-100' : 'text-gray-400'}`}>
-                                        {format(new Date(msg.createdAt), 'HH:mm')}
+                                        {format(parseServerDate(msg.createdAt), 'HH:mm')}
                                     </p>
                                 </div>
                             </div>

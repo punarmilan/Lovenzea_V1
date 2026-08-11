@@ -10,6 +10,16 @@ import Swal from 'sweetalert2';
 import { fetchRecentConversations, fetchChatHistory, setActiveChatUser, markAllChatAsRead, clearChatError } from '../../../Slice/ChatSlice';
 import ChatService from '../../../services/chatService';
 
+const parseServerDate = (dateStr) => {
+    if (!dateStr) return new Date();
+    if (dateStr instanceof Date) return dateStr;
+    const str = String(dateStr).trim();
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(str) && !str.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(str)) {
+        return new Date(str + 'Z');
+    }
+    return new Date(str);
+};
+
 const ChatsPage = () => {
     const dispatch = useDispatch();
     const location = useLocation();
@@ -192,7 +202,7 @@ const ChatsPage = () => {
                                             <div className="flex justify-between items-baseline mb-0.5">
                                                 <span className="font-bold text-sm text-[#B54768] truncate">{c.otherUserName}</span>
                                                 <span className="text-[10px] text-gray-400 font-medium whitespace-nowrap">
-                                                    {c.lastActive ? new Date(c.lastActive).toLocaleDateString([], { day: '2-digit', month: 'short' }) : ''}
+                                                    {c.lastActive ? parseServerDate(c.lastActive).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                                                 </span>
                                             </div>
                                             <p className="text-xs text-theme-text-secondary truncate">{c.lastMessage || 'No messages yet'}</p>
@@ -268,7 +278,7 @@ const ChatsPage = () => {
                                                 }`}>
                                                     <p className="leading-relaxed break-words">{msg.content}</p>
                                                     <span className={`text-[9px] block text-right mt-1 ${isMe ? 'text-white/80' : 'text-gray-400'}`}>
-                                                        {format(new Date(msg.createdAt), 'HH:mm')}
+                                                        {format(parseServerDate(msg.createdAt), 'HH:mm')}
                                                     </span>
                                                 </div>
                                             </div>
